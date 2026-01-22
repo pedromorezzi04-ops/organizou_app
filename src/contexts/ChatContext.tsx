@@ -76,9 +76,19 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
 
     try {
-      // Get current session token
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData?.session?.access_token || '';
+      // Refresh session to ensure we have a valid token
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError || !refreshData?.session) {
+        // Fallback to current session if refresh fails
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData?.session?.access_token) {
+          throw new Error('Sessão expirada. Por favor, faça login novamente.');
+        }
+        var accessToken = sessionData.session.access_token;
+      } else {
+        var accessToken = refreshData.session.access_token;
+      }
 
       const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
