@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, TrendingUp, TrendingDown, FileText, Settings, BarChart3 } from 'lucide-react';
+import { Home, TrendingUp, TrendingDown, FileText, Settings, BarChart3, Table } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
   { path: '/saidas', icon: TrendingDown, label: 'Saídas' },
   { path: '/notinhas', icon: FileText, label: 'Notinhas' },
   { path: '/graficos', icon: BarChart3, label: 'Gráficos' },
+  { path: '/tabelas', icon: Table, label: 'Tabelas' },
   { path: '/config', icon: Settings, label: 'Config' },
 ];
 
