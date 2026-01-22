@@ -51,6 +51,9 @@ const Impostos = () => {
   const [percentage, setPercentage] = useState('');
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
+  
+  // Editable percentage for ME when marking as paid
+  const [editablePercentage, setEditablePercentage] = useState('');
 
   // Fetch user's tax configuration
   const { data: profile, isLoading: isLoadingProfile } = useQuery({
@@ -132,22 +135,25 @@ const Impostos = () => {
       setTaxType(profile.tax_type);
       setFixedValue(profile.tax_fixed_value?.toString() || '');
       setPercentage(profile.tax_percentage?.toString() || '');
+      setEditablePercentage(profile.tax_percentage?.toString() || '');
     }
   }, [profile]);
 
   const isConfigured = profile?.tax_type != null;
 
-  // Calculate estimated tax
+  // Calculate estimated tax using editable percentage for ME
   const calculateEstimatedTax = () => {
     if (!profile?.tax_type) return 0;
     if (profile.tax_type === 'mei') {
       return Number(profile.tax_fixed_value) || 0;
     }
-    // ME: percentage of monthly income
-    return (monthlyIncome * (Number(profile.tax_percentage) || 0)) / 100;
+    // ME: percentage of monthly income (use editable value)
+    const percentageValue = parseFloat(editablePercentage) || Number(profile.tax_percentage) || 0;
+    return (monthlyIncome * percentageValue) / 100;
   };
 
   const estimatedTax = calculateEstimatedTax();
+  const currentPercentage = parseFloat(editablePercentage) || Number(profile?.tax_percentage) || 0;
 
   // Get current month payment status
   const currentMonthPayment = taxPayments.find(
@@ -449,9 +455,22 @@ const Impostos = () => {
                   {formatCurrency(estimatedTax)}
                 </div>
 
-                {profile?.tax_type === 'me' && (
+                {profile?.tax_type === 'me' && !isPaid && (
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <Input
+                      type="number"
+                      value={editablePercentage}
+                      onChange={(e) => setEditablePercentage(e.target.value)}
+                      className="w-16 h-8 text-center"
+                      step="0.1"
+                    />
+                    <span>% sobre {formatCurrency(monthlyIncome)} de entradas</span>
+                  </div>
+                )}
+                
+                {profile?.tax_type === 'me' && isPaid && (
                   <p className="text-sm text-muted-foreground">
-                    {profile.tax_percentage}% sobre {formatCurrency(monthlyIncome)} de entradas
+                    {currentPercentage}% sobre {formatCurrency(monthlyIncome)} de entradas
                   </p>
                 )}
 
