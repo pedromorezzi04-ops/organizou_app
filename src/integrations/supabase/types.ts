@@ -63,6 +63,9 @@ export type Database = {
           id: string
           logo_url: string | null
           primary_color: string | null
+          tax_fixed_value: number | null
+          tax_percentage: number | null
+          tax_type: string | null
           updated_at: string
           user_id: string
         }
@@ -72,6 +75,9 @@ export type Database = {
           id?: string
           logo_url?: string | null
           primary_color?: string | null
+          tax_fixed_value?: number | null
+          tax_percentage?: number | null
+          tax_type?: string | null
           updated_at?: string
           user_id: string
         }
@@ -81,6 +87,9 @@ export type Database = {
           id?: string
           logo_url?: string | null
           primary_color?: string | null
+          tax_fixed_value?: number | null
+          tax_percentage?: number | null
+          tax_type?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -114,6 +123,42 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tax_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          paid_at: string | null
+          reference_month: string
+          status: string
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          reference_month: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          reference_month?: string
+          status?: string
+          transaction_id?: string | null
           updated_at?: string
           user_id?: string
         }
