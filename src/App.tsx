@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Entradas from "./pages/Entradas";
 import Saidas from "./pages/Saidas";
 import Notinhas from "./pages/Notinhas";
+import Graficos from "./pages/Graficos";
 import Config from "./pages/Config";
 import NotFound from "./pages/NotFound";
 
@@ -57,6 +58,7 @@ const AppRoutes = () => (
     <Route path="/entradas" element={<ProtectedRoute><Entradas /></ProtectedRoute>} />
     <Route path="/saidas" element={<ProtectedRoute><Saidas /></ProtectedRoute>} />
     <Route path="/notinhas" element={<ProtectedRoute><Notinhas /></ProtectedRoute>} />
+    <Route path="/graficos" element={<ProtectedRoute><Graficos /></ProtectedRoute>} />
     <Route path="/config" element={<ProtectedRoute><Config /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
