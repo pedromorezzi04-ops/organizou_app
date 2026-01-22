@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Plus, FileText, Check, Clock, List, CalendarDays } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth } from 'date-fns';
+import { Plus, FileText, Check, Clock, List, CalendarDays, Trash2 } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,26 @@ const Notinhas = () => {
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const { data: installments, isLoading } = useAllInstallments();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase
+      .from('installments')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover a notinha.",
+        variant: "destructive",
+      });
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['installments'] });
+      toast({ title: "Notinha removida" });
+    }
+  };
 
   return (
     <Layout title="Notinhas">
@@ -64,7 +84,7 @@ const Notinhas = () => {
         ) : installments?.length === 0 ? (
           <EmptyState />
         ) : viewMode === 'list' ? (
-          <ListView installments={installments || []} />
+          <ListView installments={installments || []} onDelete={handleDelete} />
         ) : (
           <CalendarView 
             installments={installments || []} 
@@ -94,7 +114,13 @@ const EmptyState = () => (
   </div>
 );
 
-const ListView = ({ installments }: { installments: Installment[] }) => {
+const ListView = ({ 
+  installments, 
+  onDelete 
+}: { 
+  installments: Installment[];
+  onDelete: (id: string) => void;
+}) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -148,7 +174,7 @@ const ListView = ({ installments }: { installments: Installment[] }) => {
                 {format(new Date(installment.due_date), "dd/MM/yyyy")}
               </p>
             </div>
-            <div className="text-right">
+            <div className="text-right mr-2">
               <p className={cn(
                 "font-semibold",
                 installment.status === 'paid' 
@@ -161,6 +187,13 @@ const ListView = ({ installments }: { installments: Installment[] }) => {
                 {installment.status === 'paid' ? 'Recebido' : 'Pendente'}
               </p>
             </div>
+            <button
+              onClick={() => onDelete(installment.id)}
+              className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+              aria-label="Remover notinha"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
         </div>
       ))}

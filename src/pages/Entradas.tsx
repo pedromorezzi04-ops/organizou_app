@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, TrendingUp, Check, Clock, Loader2 } from 'lucide-react';
+import { Plus, TrendingUp, Check, Clock, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Layout from '@/components/Layout';
@@ -8,6 +8,9 @@ import { useAllTransactions, Transaction } from '@/hooks/useFinancialData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import NewTransactionDialog from '@/components/NewTransactionDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
@@ -19,8 +22,30 @@ const formatCurrency = (value: number) => {
 const Entradas = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { data: transactions, isLoading } = useAllTransactions();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const incomeTransactions = transactions?.filter(t => t.type === 'income') || [];
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover a entrada.",
+        variant: "destructive",
+      });
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      toast({
+        title: "Entrada removida",
+      });
+    }
+  };
 
   return (
     <Layout title="Entradas">
@@ -58,7 +83,11 @@ const Entradas = () => {
             </div>
           ) : (
             incomeTransactions.map((transaction) => (
-              <TransactionCard key={transaction.id} transaction={transaction} />
+              <TransactionCard 
+                key={transaction.id} 
+                transaction={transaction} 
+                onDelete={handleDelete}
+              />
             ))
           )}
         </div>
@@ -73,7 +102,13 @@ const Entradas = () => {
   );
 };
 
-const TransactionCard = ({ transaction }: { transaction: Transaction }) => {
+const TransactionCard = ({ 
+  transaction, 
+  onDelete 
+}: { 
+  transaction: Transaction;
+  onDelete: (id: string) => void;
+}) => {
   const isPaid = transaction.status === 'paid';
   
   return (
@@ -94,7 +129,7 @@ const TransactionCard = ({ transaction }: { transaction: Transaction }) => {
             {transaction.payment_method && ` • ${transaction.payment_method}`}
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-right mr-2">
           <p className="font-semibold text-emerald-600 dark:text-emerald-400">
             {formatCurrency(Number(transaction.amount))}
           </p>
@@ -102,6 +137,13 @@ const TransactionCard = ({ transaction }: { transaction: Transaction }) => {
             {isPaid ? 'Recebido' : 'Pendente'}
           </p>
         </div>
+        <button
+          onClick={() => onDelete(transaction.id)}
+          className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+          aria-label="Remover entrada"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

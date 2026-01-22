@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, TrendingDown, Repeat } from 'lucide-react';
+import { Plus, TrendingDown, Repeat, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Layout from '@/components/Layout';
@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAllTransactions, useRecurringExpenses, Transaction, RecurringExpense } from '@/hooks/useFinancialData';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 import NewTransactionDialog from '@/components/NewTransactionDialog';
 import NewRecurringExpenseDialog from '@/components/NewRecurringExpenseDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
@@ -30,8 +32,46 @@ const Saidas = () => {
   const [recurringDialogOpen, setRecurringDialogOpen] = useState(false);
   const { data: transactions, isLoading: transactionsLoading } = useAllTransactions();
   const { data: recurringExpenses, isLoading: recurringLoading } = useRecurringExpenses();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const expenseTransactions = transactions?.filter(t => t.type === 'expense') || [];
+
+  const handleDeleteTransaction = async (id: string) => {
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover a saída.",
+        variant: "destructive",
+      });
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      toast({ title: "Saída removida" });
+    }
+  };
+
+  const handleDeleteRecurring = async (id: string) => {
+    const { error } = await supabase
+      .from('recurring_expenses')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover a despesa fixa.",
+        variant: "destructive",
+      });
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['recurring_expenses'] });
+      toast({ title: "Despesa fixa removida" });
+    }
+  };
 
   return (
     <Layout title="Saídas">
@@ -60,7 +100,11 @@ const Saidas = () => {
               <EmptyState icon={TrendingDown} message="Nenhuma saída registrada" />
             ) : (
               expenseTransactions.map((transaction) => (
-                <ExpenseCard key={transaction.id} transaction={transaction} />
+                <ExpenseCard 
+                  key={transaction.id} 
+                  transaction={transaction} 
+                  onDelete={handleDeleteTransaction}
+                />
               ))
             )}
           </div>
@@ -85,7 +129,11 @@ const Saidas = () => {
               <EmptyState icon={Repeat} message="Nenhuma despesa fixa cadastrada" />
             ) : (
               recurringExpenses?.map((expense) => (
-                <RecurringExpenseCard key={expense.id} expense={expense} />
+                <RecurringExpenseCard 
+                  key={expense.id} 
+                  expense={expense} 
+                  onDelete={handleDeleteRecurring}
+                />
               ))
             )}
           </div>
@@ -115,7 +163,13 @@ const EmptyState = ({ icon: Icon, message }: { icon: React.ElementType; message:
   </div>
 );
 
-const ExpenseCard = ({ transaction }: { transaction: Transaction }) => {
+const ExpenseCard = ({ 
+  transaction, 
+  onDelete 
+}: { 
+  transaction: Transaction;
+  onDelete: (id: string) => void;
+}) => {
   const emoji = categoryIcons[transaction.category || 'outros'] || '📋';
   
   return (
@@ -130,17 +184,30 @@ const ExpenseCard = ({ transaction }: { transaction: Transaction }) => {
             {format(new Date(transaction.created_at), "dd 'de' MMM", { locale: ptBR })}
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-right mr-2">
           <p className="font-semibold text-red-600 dark:text-red-400">
             -{formatCurrency(Number(transaction.amount))}
           </p>
         </div>
+        <button
+          onClick={() => onDelete(transaction.id)}
+          className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+          aria-label="Remover saída"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
 };
 
-const RecurringExpenseCard = ({ expense }: { expense: RecurringExpense }) => {
+const RecurringExpenseCard = ({ 
+  expense, 
+  onDelete 
+}: { 
+  expense: RecurringExpense;
+  onDelete: (id: string) => void;
+}) => {
   return (
     <div className="bg-card border border-border rounded-xl p-4">
       <div className="flex items-center gap-3">
@@ -153,12 +220,19 @@ const RecurringExpenseCard = ({ expense }: { expense: RecurringExpense }) => {
             Vence dia {expense.due_day}
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-right mr-2">
           <p className="font-semibold text-muted-foreground">
             {formatCurrency(Number(expense.amount))}
           </p>
           <p className="text-xs text-muted-foreground">mensal</p>
         </div>
+        <button
+          onClick={() => onDelete(expense.id)}
+          className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+          aria-label="Remover despesa fixa"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
