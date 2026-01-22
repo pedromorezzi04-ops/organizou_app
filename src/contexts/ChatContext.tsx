@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { useLocation } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ChatMessage {
   id: string;
@@ -31,6 +32,7 @@ export const useChat = () => {
 };
 
 const WEBHOOK_URL = 'https://b4b-n8n.ajndqt.easypanel.host/webhook/9f19c4a0-1665-4cd4-827f-a277e5076a50';
+const AGENT_API_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-api`;
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -74,6 +76,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
 
     try {
+      // Get current session token
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token || '';
+
       const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: {
@@ -83,6 +89,16 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           user_id: user?.id || 'anonymous',
           message: content.trim(),
           context: getCurrentContext(),
+          // Send API info so n8n agent can make calls
+          agent_api: {
+            base_url: AGENT_API_URL,
+            auth_token: accessToken,
+            endpoints: {
+              create_transaction: 'POST /transactions',
+              create_installments: 'POST /installments',
+              get_summary: 'GET /summary'
+            }
+          }
         }),
       });
 
