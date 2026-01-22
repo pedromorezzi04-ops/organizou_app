@@ -92,10 +92,33 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const data = await response.text();
         try {
           const jsonData = JSON.parse(data);
-          assistantContent = jsonData.message || jsonData.response || jsonData.text || data;
+          // Extract clean text from various possible response formats
+          if (typeof jsonData === 'string') {
+            assistantContent = jsonData;
+          } else if (jsonData.output) {
+            assistantContent = typeof jsonData.output === 'string' 
+              ? jsonData.output 
+              : JSON.stringify(jsonData.output);
+          } else if (jsonData.message) {
+            assistantContent = jsonData.message;
+          } else if (jsonData.response) {
+            assistantContent = jsonData.response;
+          } else if (jsonData.text) {
+            assistantContent = jsonData.text;
+          } else {
+            // If it's an object without known keys, try to extract first string value
+            const values = Object.values(jsonData);
+            const firstString = values.find(v => typeof v === 'string');
+            assistantContent = firstString as string || data;
+          }
         } catch {
+          // Not JSON, use raw text
           assistantContent = data || assistantContent;
         }
+        // Clean up any remaining quotes or brackets at start/end
+        assistantContent = assistantContent
+          .replace(/^["'\s]+|["'\s]+$/g, '')
+          .trim();
       }
 
       const assistantMessage: ChatMessage = {
