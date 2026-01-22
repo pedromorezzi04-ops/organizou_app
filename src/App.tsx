@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { ChatProvider } from "./contexts/ChatContext";
+import ChatWidget from "./components/ChatWidget";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Entradas from "./pages/Entradas";
@@ -68,6 +70,17 @@ const AppRoutes = () => (
   </Routes>
 );
 
+const AppWithChat = () => {
+  const { user } = useAuth();
+  
+  return (
+    <>
+      <AppRoutes />
+      {user && <ChatWidget />}
+    </>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -75,7 +88,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <ChatProvider>
+            <AppWithChat />
+          </ChatProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
