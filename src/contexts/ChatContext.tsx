@@ -30,7 +30,7 @@ export const useChat = () => {
   return context;
 };
 
-const WEBHOOK_URL = 'https://b4b-n8n.ajndqt.easypanel.host/webhook-test/9f19c4a0-1665-4cd4-827f-a277e5076a50';
+const WEBHOOK_URL = 'https://b4b-n8n.ajndqt.easypanel.host/webhook/9f19c4a0-1665-4cd4-827f-a277e5076a50';
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
