@@ -3,17 +3,18 @@ import { Sparkles, X, Send, Loader2 } from 'lucide-react';
 import { useChat, ChatMessage } from '@/contexts/ChatContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 const ChatWidget = () => {
   const { messages, isOpen, isLoading, toggleChat, closeChat, sendMessage } = useChat();
   const [input, setInput] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    // Auto-scroll to bottom when new messages arrive
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isLoading]);
 
@@ -59,8 +60,11 @@ const ChatWidget = () => {
               </button>
             </div>
 
-            {/* Messages Area */}
-            <ScrollArea className="flex-1 p-4 min-h-[200px] max-h-[350px]" ref={scrollRef}>
+            {/* Messages Area - Native scrollable div */}
+            <div 
+              ref={scrollContainerRef}
+              className="flex-1 p-4 min-h-[200px] max-h-[350px] overflow-y-auto"
+            >
               {messages.length === 0 ? (
                 <div className="text-center py-8">
                   <Sparkles className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
@@ -86,9 +90,11 @@ const ChatWidget = () => {
                       <span className="text-xs">Digitando...</span>
                     </div>
                   )}
+                  {/* Invisible element to scroll to */}
+                  <div ref={messagesEndRef} />
                 </div>
               )}
-            </ScrollArea>
+            </div>
 
             {/* Input Area */}
             <form onSubmit={handleSubmit} className="p-3 border-t border-border bg-muted/30">
