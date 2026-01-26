@@ -159,6 +159,30 @@ const Graficos = () => {
     ?.filter((i) => i.status === 'pending')
     .reduce((acc, i) => acc + Number(i.total_value), 0) || 0;
 
+  // Estimated income (pending transactions)
+  const estimatedIncome = transactions
+    ?.filter((t) => t.type === 'income' && t.status === 'pending')
+    .reduce((acc, t) => acc + Number(t.amount), 0) || 0;
+
+  // Estimated expense (pending transactions)
+  const estimatedExpense = transactions
+    ?.filter((t) => t.type === 'expense' && t.status === 'pending')
+    .reduce((acc, t) => acc + Number(t.amount), 0) || 0;
+
+  // Pie data for cash flow (em caixa)
+  const cashFlowPieData = [
+    { name: 'Entradas', value: totalIncome },
+    { name: 'Saídas', value: totalExpense },
+  ].filter(item => item.value > 0);
+
+  // Pie data for estimated flow
+  const estimatedFlowPieData = [
+    { name: 'Entradas Est.', value: estimatedIncome + totalPending },
+    { name: 'Saídas Est.', value: estimatedExpense },
+  ].filter(item => item.value > 0);
+
+  const FLOW_COLORS = ['hsl(142, 76%, 36%)', 'hsl(0, 84%, 60%)'];
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -290,6 +314,81 @@ const Graficos = () => {
                     />
                   </AreaChart>
                 </ChartContainer>
+              </CardContent>
+            </Card>
+            {/* Pie Chart - Cash Flow */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Entrada x Saída (Em Caixa)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {cashFlowPieData.length > 0 ? (
+                  <ChartContainer config={chartConfig} className="h-[200px] w-full">
+                    <PieChart accessibilityLayer>
+                      <ChartTooltip
+                        content={<ChartTooltipContent />}
+                        formatter={(value) => formatCurrency(Number(value))}
+                      />
+                      <Pie
+                        data={cashFlowPieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={70}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {cashFlowPieData.map((_, index) => (
+                          <Cell key={`cell-cash-${index}`} fill={FLOW_COLORS[index % FLOW_COLORS.length]} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ChartContainer>
+                ) : (
+                  <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                    Nenhuma transação registrada
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Pie Chart - Estimated Flow */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Entrada x Saída (Estimado)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {estimatedFlowPieData.length > 0 ? (
+                  <ChartContainer config={chartConfig} className="h-[200px] w-full">
+                    <PieChart accessibilityLayer>
+                      <ChartTooltip
+                        content={<ChartTooltipContent />}
+                        formatter={(value) => formatCurrency(Number(value))}
+                      />
+                      <Pie
+                        data={estimatedFlowPieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={70}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {estimatedFlowPieData.map((_, index) => (
+                          <Cell key={`cell-est-${index}`} fill={FLOW_COLORS[index % FLOW_COLORS.length]} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ChartContainer>
+                ) : (
+                  <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                    Nenhuma transação pendente
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
