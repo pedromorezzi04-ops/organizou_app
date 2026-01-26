@@ -53,7 +53,7 @@ const Dashboard = () => {
   });
 
   return (
-    <Layout title="Início">
+    <Layout>
       <div className="space-y-6">
         {/* Destaque: Sobrou no Mês */}
         <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 p-6 text-primary-foreground">
