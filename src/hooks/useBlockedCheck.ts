@@ -18,8 +18,10 @@ export const useBlockedCheck = () => {
       }
 
       try {
-        // Add a small delay to ensure profile is created after signup
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait longer to ensure profile is created after signup
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        console.log('Checking status for user:', user.id);
         
         const { data, error } = await supabase.rpc('get_user_status', {
           _user_id: user.id
