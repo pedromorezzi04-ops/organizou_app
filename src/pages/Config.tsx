@@ -14,6 +14,7 @@ import { useAllTransactions, useAllInstallments, useRecurringExpenses } from '@/
 const Config = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdminCheck();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [businessName, setBusinessName] = useState('');
@@ -155,6 +156,24 @@ const Config = () => {
             Sair
           </Button>
         </div>
+
+        {/* Painel Admin - apenas para admins */}
+        {isAdmin && (
+          <div className="space-y-4 pt-4 border-t">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              Administração
+            </h2>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/admin-secret-dashboard')} 
+              className="w-full gap-2"
+            >
+              <Shield className="w-4 h-4" />
+              Gerenciar Usuários
+            </Button>
+          </div>
+        )}
       </div>
     </Layout>
   );
