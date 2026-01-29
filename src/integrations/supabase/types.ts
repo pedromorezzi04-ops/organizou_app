@@ -252,6 +252,7 @@ export type Database = {
         Args: { _status: string; _user_id: string }
         Returns: boolean
       }
+      get_user_status: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -260,6 +261,7 @@ export type Database = {
         Returns: boolean
       }
       is_user_blocked: { Args: { _user_id: string }; Returns: boolean }
+      is_user_pending: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
