@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Upload, LogOut, Download } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, Upload, LogOut, Download, Shield } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAllTransactions, useAllInstallments, useRecurringExpenses } from '@/hooks/useFinancialData';
 
 const Config = () => {
+  const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
