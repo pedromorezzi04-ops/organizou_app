@@ -243,6 +243,7 @@ export type Database = {
         Returns: {
           business_name: string
           created_at: string
+          email: string
           id: string
           status: string
           user_id: string
