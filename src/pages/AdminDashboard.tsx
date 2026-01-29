@@ -18,6 +18,7 @@ interface UserProfile {
   business_name: string | null;
   status: string;
   created_at: string;
+  email: string | null;
 }
 
 const AdminDashboard = () => {
@@ -211,8 +212,8 @@ const AdminDashboard = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Email</TableHead>
                     <TableHead>Negócio</TableHead>
-                    <TableHead>User ID</TableHead>
                     <TableHead>Criado em</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -222,10 +223,10 @@ const AdminDashboard = () => {
                   {users.map((profile) => (
                     <TableRow key={profile.id}>
                       <TableCell className="font-medium">
-                        {profile.business_name || 'Sem nome'}
+                        {profile.email || 'Sem email'}
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {profile.user_id.substring(0, 8)}...
+                      <TableCell className="text-muted-foreground">
+                        {profile.business_name || 'Sem nome'}
                       </TableCell>
                       <TableCell>
                         {format(new Date(profile.created_at), "dd/MM/yyyy", { locale: ptBR })}
