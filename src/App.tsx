@@ -18,6 +18,7 @@ import Tabelas from "./pages/Tabelas";
 import Impostos from "./pages/Impostos";
 import Config from "./pages/Config";
 import Blocked from "./pages/Blocked";
+import Pending from "./pages/Pending";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -25,9 +26,9 @@ const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  const { isBlocked, loading: blockedLoading } = useBlockedCheck();
+  const { isBlocked, isPending, loading: statusLoading } = useBlockedCheck();
   
-  if (loading || blockedLoading) {
+  if (loading || statusLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -41,6 +42,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (isBlocked) {
     return <Navigate to="/blocked" replace />;
+  }
+
+  if (isPending) {
+    return <Navigate to="/pending" replace />;
   }
   
   return <>{children}</>;
@@ -69,6 +74,7 @@ const AppRoutes = () => (
     <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
     <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/blocked" element={<Blocked />} />
+    <Route path="/pending" element={<Pending />} />
     <Route path="/admin-secret-dashboard" element={<AdminDashboard />} />
     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
     <Route path="/entradas" element={<ProtectedRoute><Entradas /></ProtectedRoute>} />
@@ -84,12 +90,12 @@ const AppRoutes = () => (
 
 const AppWithChat = () => {
   const { user } = useAuth();
-  const { isBlocked } = useBlockedCheck();
+  const { isBlocked, isPending } = useBlockedCheck();
   
   return (
     <>
       <AppRoutes />
-      {user && !isBlocked && <ChatWidget />}
+      {user && !isBlocked && !isPending && <ChatWidget />}
     </>
   );
 };

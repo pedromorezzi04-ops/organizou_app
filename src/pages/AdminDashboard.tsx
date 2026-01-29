@@ -102,6 +102,7 @@ const AdminDashboard = () => {
 
   const activeUsers = users.filter(u => u.status === 'active');
   const blockedUsers = users.filter(u => u.status === 'blocked');
+  const pendingUsers = users.filter(u => u.status === 'pending');
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -118,11 +119,11 @@ const AdminDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total de Usuários
+                Total
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -133,10 +134,24 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
 
+          <Card className="border-amber-500/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Pendentes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-amber-500" />
+                <span className="text-2xl font-bold text-amber-500">{pendingUsers.length}</span>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Contas Ativas
+                Ativos
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -150,7 +165,7 @@ const AdminDashboard = () => {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Contas Bloqueadas
+                Bloqueados
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -217,47 +232,56 @@ const AdminDashboard = () => {
                       </TableCell>
                       <TableCell>
                         <Badge 
-                          variant={profile.status === 'active' ? 'default' : 'destructive'}
-                          className={profile.status === 'active' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}
+                          variant={profile.status === 'active' ? 'default' : profile.status === 'pending' ? 'secondary' : 'destructive'}
+                          className={
+                            profile.status === 'active' 
+                              ? 'bg-emerald-500 hover:bg-emerald-600' 
+                              : profile.status === 'pending'
+                              ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                              : ''
+                          }
                         >
-                          {profile.status === 'active' ? 'Ativo' : 'Bloqueado'}
+                          {profile.status === 'active' ? 'Ativo' : profile.status === 'pending' ? 'Pendente' : 'Bloqueado'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {profile.status === 'active' ? (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => updateUserStatus(profile.user_id, 'blocked')}
-                            disabled={updatingUser === profile.user_id}
-                          >
-                            {updatingUser === profile.user_id ? (
-                              <RefreshCw className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <>
-                                <UserX className="w-4 h-4 mr-1" />
-                                Bloquear
-                              </>
-                            )}
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="bg-emerald-500 hover:bg-emerald-600"
-                            onClick={() => updateUserStatus(profile.user_id, 'active')}
-                            disabled={updatingUser === profile.user_id}
-                          >
-                            {updatingUser === profile.user_id ? (
-                              <RefreshCw className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <>
-                                <UserCheck className="w-4 h-4 mr-1" />
-                                Ativar
-                              </>
-                            )}
-                          </Button>
-                        )}
+                        <div className="flex gap-2 justify-end">
+                          {profile.status !== 'active' && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="bg-emerald-500 hover:bg-emerald-600"
+                              onClick={() => updateUserStatus(profile.user_id, 'active')}
+                              disabled={updatingUser === profile.user_id}
+                            >
+                              {updatingUser === profile.user_id ? (
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <UserCheck className="w-4 h-4 mr-1" />
+                                  Ativar
+                                </>
+                              )}
+                            </Button>
+                          )}
+                          {profile.status !== 'blocked' && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => updateUserStatus(profile.user_id, 'blocked')}
+                              disabled={updatingUser === profile.user_id}
+                            >
+                              {updatingUser === profile.user_id ? (
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <UserX className="w-4 h-4 mr-1" />
+                                  Bloquear
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

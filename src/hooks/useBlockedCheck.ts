@@ -5,37 +5,42 @@ import { useAuth } from '@/contexts/AuthContext';
 export const useBlockedCheck = () => {
   const { user, signOut } = useAuth();
   const [isBlocked, setIsBlocked] = useState(false);
+  const [isPending, setIsPending] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkBlocked = async () => {
+    const checkStatus = async () => {
       if (!user) {
         setIsBlocked(false);
+        setIsPending(false);
         setLoading(false);
         return;
       }
 
       try {
-        const { data, error } = await supabase.rpc('is_user_blocked', {
+        const { data, error } = await supabase.rpc('get_user_status', {
           _user_id: user.id
         });
 
         if (error) {
-          console.error('Error checking blocked status:', error);
+          console.error('Error checking user status:', error);
           setIsBlocked(false);
+          setIsPending(false);
         } else {
-          setIsBlocked(data === true);
+          setIsBlocked(data === 'blocked');
+          setIsPending(data === 'pending');
         }
       } catch (err) {
-        console.error('Error checking blocked status:', err);
+        console.error('Error checking user status:', err);
         setIsBlocked(false);
+        setIsPending(false);
       } finally {
         setLoading(false);
       }
     };
 
-    checkBlocked();
+    checkStatus();
   }, [user]);
 
-  return { isBlocked, loading, signOut };
+  return { isBlocked, isPending, loading, signOut };
 };
