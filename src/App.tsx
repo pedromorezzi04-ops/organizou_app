@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ChatProvider } from "./contexts/ChatContext";
+import { useBlockedCheck } from "./hooks/useBlockedCheck";
 import ChatWidget from "./components/ChatWidget";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -16,14 +17,17 @@ import Graficos from "./pages/Graficos";
 import Tabelas from "./pages/Tabelas";
 import Impostos from "./pages/Impostos";
 import Config from "./pages/Config";
+import Blocked from "./pages/Blocked";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
+  const { isBlocked, loading: blockedLoading } = useBlockedCheck();
   
-  if (loading) {
+  if (loading || blockedLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -33,6 +37,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  if (isBlocked) {
+    return <Navigate to="/blocked" replace />;
   }
   
   return <>{children}</>;
@@ -60,6 +68,8 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
     <Route path="/reset-password" element={<ResetPassword />} />
+    <Route path="/blocked" element={<Blocked />} />
+    <Route path="/admin-secret-dashboard" element={<AdminDashboard />} />
     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
     <Route path="/entradas" element={<ProtectedRoute><Entradas /></ProtectedRoute>} />
     <Route path="/saidas" element={<ProtectedRoute><Saidas /></ProtectedRoute>} />
@@ -74,11 +84,12 @@ const AppRoutes = () => (
 
 const AppWithChat = () => {
   const { user } = useAuth();
+  const { isBlocked } = useBlockedCheck();
   
   return (
     <>
       <AppRoutes />
-      {user && <ChatWidget />}
+      {user && !isBlocked && <ChatWidget />}
     </>
   );
 };
