@@ -16,6 +16,12 @@ export const useBlockedCheck = () => {
       return;
     }
 
+    // Fail-safe: while validating status, do not allow access.
+    // This prevents a brief window where a blocked/pending user could see protected screens.
+    setLoading(true);
+    setIsBlocked(false);
+    setIsPending(true);
+
     try {
       const { data, error } = await supabase.rpc('get_user_status', {
         _user_id: user.id
@@ -49,13 +55,14 @@ export const useBlockedCheck = () => {
       return;
     }
 
-    // Initial check with delay to allow profile creation
-    const initialCheck = async () => {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      await checkStatus();
-    };
+    // When a user logs in (or switches accounts), force status revalidation
+    // and keep the app in a safe state until we get the result.
+    setLoading(true);
+    setIsBlocked(false);
+    setIsPending(true);
 
-    initialCheck();
+    // Initial check immediately
+    checkStatus();
 
     // Subscribe to realtime changes on the user's profile
     const channel = supabase
