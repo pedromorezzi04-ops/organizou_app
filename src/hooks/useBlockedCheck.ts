@@ -8,63 +8,63 @@ export const useBlockedCheck = () => {
   const [isPending, setIsPending] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const checkStatus = useCallback(async () => {
-    if (!user) {
-      setIsBlocked(false);
-      setIsPending(false);
-      setLoading(false);
-      return;
-    }
+  const userId = user?.id ?? null;
 
+  const checkStatus = useCallback(async (uid: string) => {
     try {
       const { data, error } = await supabase.rpc('get_user_status', {
-        _user_id: user.id
+        _user_id: uid
       });
 
       if (error) {
         console.error('Error checking user status:', error);
-        setIsBlocked(false);
-        setIsPending(true);
-      } else {
-        const status = data || 'pending';
-        setIsBlocked(status === 'blocked');
-        setIsPending(status === 'pending');
+        // fail-safe
+        return { status: 'pending' as const };
       }
+
+      const status = (data || 'pending') as string;
+      return { status };
     } catch (err) {
       console.error('Error checking user status:', err);
-      setIsBlocked(false);
-      setIsPending(true);
-    } finally {
-      setLoading(false);
+      return { status: 'pending' as const };
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
-    if (!user) {
+    let cancelled = false;
+
+    if (!userId) {
       setIsBlocked(false);
       setIsPending(false);
       setLoading(false);
       return;
     }
 
-    // Set loading when user changes
     setLoading(true);
-    checkStatus();
+
+    // Initial status fetch
+    checkStatus(userId).then(({ status }) => {
+      if (cancelled) return;
+      setIsBlocked(status === 'blocked');
+      setIsPending(status === 'pending');
+      setLoading(false);
+    });
 
     // Subscribe to realtime changes on the user's profile
     const channel = supabase
-      .channel(`profile-status-${user.id}`)
+      .channel(`profile-status-${userId}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'profiles',
-          filter: `user_id=eq.${user.id}`
+          filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('Profile status changed:', payload);
-          const newStatus = payload.new.status;
+          if (cancelled) return;
+          const newStatus = (payload.new as { status?: string }).status;
+          if (!newStatus) return;
           setIsBlocked(newStatus === 'blocked');
           setIsPending(newStatus === 'pending');
         }
@@ -72,20 +72,24 @@ export const useBlockedCheck = () => {
       .subscribe();
 
     return () => {
+      cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [user?.id]); // Only depend on user.id to avoid unnecessary re-runs
+  }, [userId, checkStatus]);
 
-  // Periodic check every 60 seconds as a fallback
+  // Periodic check every 1 hour as a fallback (realtime should handle instant updates)
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     const interval = setInterval(() => {
-      checkStatus();
-    }, 60000);
+      checkStatus(userId).then(({ status }) => {
+        setIsBlocked(status === 'blocked');
+        setIsPending(status === 'pending');
+      });
+    }, 60 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [user?.id, checkStatus]);
+  }, [userId, checkStatus]);
 
   return { isBlocked, isPending, loading, signOut };
 };

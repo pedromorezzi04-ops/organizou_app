@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ChatProvider } from "./contexts/ChatContext";
-import { useBlockedCheck } from "./hooks/useBlockedCheck";
+import { UserStatusProvider, useUserStatus } from "./contexts/UserStatusContext";
 import ChatWidget from "./components/ChatWidget";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -26,7 +26,7 @@ const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  const { isBlocked, isPending, loading: statusLoading } = useBlockedCheck();
+  const { isBlocked, isPending, loading: statusLoading } = useUserStatus();
   
   if (loading || statusLoading) {
     return (
@@ -90,7 +90,7 @@ const AppRoutes = () => (
 
 const AppWithChat = () => {
   const { user } = useAuth();
-  const { isBlocked, isPending } = useBlockedCheck();
+  const { isBlocked, isPending } = useUserStatus();
   
   return (
     <>
@@ -108,7 +108,9 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ChatProvider>
-            <AppWithChat />
+            <UserStatusProvider>
+              <AppWithChat />
+            </UserStatusProvider>
           </ChatProvider>
         </AuthProvider>
       </BrowserRouter>
