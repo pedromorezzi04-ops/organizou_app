@@ -114,12 +114,6 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* Dica rápida */}
-        <div className="rounded-xl bg-muted/50 p-4">
-          <p className="text-sm text-muted-foreground">
-            💡 <span className="font-medium">Dica:</span> Cadastre suas despesas fixas para ter uma visão mais precisa do seu saldo.
-          </p>
-        </div>
 
         {/* Mini Bar Chart - Fluxo Semanal */}
         {!isLoading && weeklyData.some(w => w.income > 0 || w.expense > 0) && (
