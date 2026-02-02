@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -7,8 +7,9 @@ export const useBlockedCheck = () => {
   const [isBlocked, setIsBlocked] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const lastUserId = useRef<string | null>(null);
 
-  const checkStatus = useCallback(async () => {
+  const checkStatus = useCallback(async (isInitial: boolean = false) => {
     if (!user) {
       setIsBlocked(false);
       setIsPending(false);
@@ -16,18 +17,17 @@ export const useBlockedCheck = () => {
       return;
     }
 
-    // Fail-safe: while validating status, do not allow access.
-    // This prevents a brief window where a blocked/pending user could see protected screens.
-    setLoading(true);
-    setIsBlocked(false);
-    setIsPending(true);
+    // Only set loading on initial check to avoid re-renders during polling
+    if (isInitial) {
+      setLoading(true);
+      setIsBlocked(false);
+      setIsPending(true);
+    }
 
     try {
       const { data, error } = await supabase.rpc('get_user_status', {
         _user_id: user.id
       });
-
-      console.log('User status check:', { userId: user.id, status: data, error });
 
       if (error) {
         console.error('Error checking user status:', error);
@@ -52,17 +52,15 @@ export const useBlockedCheck = () => {
       setIsBlocked(false);
       setIsPending(false);
       setLoading(false);
+      lastUserId.current = null;
       return;
     }
 
-    // When a user logs in (or switches accounts), force status revalidation
-    // and keep the app in a safe state until we get the result.
-    setLoading(true);
-    setIsBlocked(false);
-    setIsPending(true);
-
-    // Initial check immediately
-    checkStatus();
+    // Only run initial check when user changes
+    if (lastUserId.current !== user.id) {
+      lastUserId.current = user.id;
+      checkStatus(true);
+    }
 
     // Subscribe to realtime changes on the user's profile
     const channel = supabase
@@ -89,13 +87,13 @@ export const useBlockedCheck = () => {
     };
   }, [user, checkStatus]);
 
-  // Periodic check every 5 seconds as a fallback
+  // Periodic check every 30 seconds as a fallback (reduced from 5s)
   useEffect(() => {
     if (!user) return;
 
     const interval = setInterval(() => {
-      checkStatus();
-    }, 5000);
+      checkStatus(false);
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [user, checkStatus]);
