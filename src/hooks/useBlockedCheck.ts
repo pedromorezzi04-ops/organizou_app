@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -7,21 +7,13 @@ export const useBlockedCheck = () => {
   const [isBlocked, setIsBlocked] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [loading, setLoading] = useState(true);
-  const lastUserId = useRef<string | null>(null);
 
-  const checkStatus = useCallback(async (isInitial: boolean = false) => {
+  const checkStatus = useCallback(async () => {
     if (!user) {
       setIsBlocked(false);
       setIsPending(false);
       setLoading(false);
       return;
-    }
-
-    // Only set loading on initial check to avoid re-renders during polling
-    if (isInitial) {
-      setLoading(true);
-      setIsBlocked(false);
-      setIsPending(true);
     }
 
     try {
@@ -52,15 +44,12 @@ export const useBlockedCheck = () => {
       setIsBlocked(false);
       setIsPending(false);
       setLoading(false);
-      lastUserId.current = null;
       return;
     }
 
-    // Only run initial check when user changes
-    if (lastUserId.current !== user.id) {
-      lastUserId.current = user.id;
-      checkStatus(true);
-    }
+    // Set loading when user changes
+    setLoading(true);
+    checkStatus();
 
     // Subscribe to realtime changes on the user's profile
     const channel = supabase
@@ -85,18 +74,18 @@ export const useBlockedCheck = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, checkStatus]);
+  }, [user?.id]); // Only depend on user.id to avoid unnecessary re-runs
 
-  // Periodic check every 30 seconds as a fallback (reduced from 5s)
+  // Periodic check every 60 seconds as a fallback
   useEffect(() => {
     if (!user) return;
 
     const interval = setInterval(() => {
-      checkStatus(false);
-    }, 30000);
+      checkStatus();
+    }, 60000);
 
     return () => clearInterval(interval);
-  }, [user, checkStatus]);
+  }, [user?.id, checkStatus]);
 
   return { isBlocked, isPending, loading, signOut };
 };
