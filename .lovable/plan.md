@@ -1,41 +1,76 @@
 
 
-# Remover Confirmacao de E-mail no Cadastro
+# Fluxo Direto SaaS: Remocao de Aprovacao e Ativacao de Paywall
 
-## Problema
-O sistema exige confirmacao de e-mail antes de permitir login, causando erro "Email not confirmed". O usuario quer que o cadastro seja direto: cria conta e ja entra no sistema.
+## Resumo
 
-## Solucao
+Transformar o sistema para que novos utilizadores entrem direto no Trial (3 dias) sem necessidade de aprovacao manual do admin. O admin mantem o poder de bloquear utilizadores.
 
-### 1. Desativar confirmacao de e-mail
-Usar a ferramenta `configure-auth` para ativar o auto-confirm de e-mail no backend. Isso faz com que todo novo usuario ja seja considerado confirmado automaticamente.
+## Alteracoes Necessarias
 
-### 2. Ajustar fluxo de signup (src/pages/Auth.tsx)
-Apos cadastro bem-sucedido:
-- Redirecionar imediatamente para `/` (o sistema de paywall cuidara de enviar para `/payment` se necessario)
-- Remover a logica de "fique na tela de login e verifique seu e-mail"
-- Manter tratamento de erros para senha fraca/vazada e e-mail duplicado
+### 1. Migracao de Banco de Dados
+- Alterar o valor padrao da coluna `status` na tabela `profiles` de `'pending'` para `'active'`
+- Atualizar todos os perfis existentes com status `pending` para `active`
 
-### Detalhes Tecnicos
+### 2. Remover Fluxo de Pendencia
 
-**Arquivo: `src/pages/Auth.tsx`**
+**Ficheiros afetados:**
+- `src/hooks/useBlockedCheck.ts` - Remover toda logica de `isPending`, simplificar para verificar apenas `blocked` e `needsPayment`
+- `src/contexts/UserStatusContext.tsx` - Tipo atualizado automaticamente (vem do hook)
+- `src/App.tsx` - Remover import de `Pending`, remover rota `/pending`, remover verificacao `isPending` do `ProtectedRoute` e `AppWithChat`
+- `src/pages/Pending.tsx` - Eliminar ficheiro (nao sera mais usado)
 
-Substituir o bloco de sucesso do signup:
-```typescript
-// DE:
-toast({ title: "Conta criada!", description: "Verifique seu e-mail..." });
-setIsLogin(true);
-setPassword('');
+### 3. Refatorar Logica de Paywall no useBlockedCheck
 
-// PARA:
-toast({ title: "Conta criada!", description: "Bem-vindo ao Organizou+!" });
-navigate('/');
+A logica atual so verifica subscricao se `status === 'active'`. Com a remocao do `pending`, a logica de paywall passa a ser:
+
+```
+1. Se blocked -> bloqueia
+2. Se admin ou legacy -> acesso total
+3. Se trial_started_at + 3 dias > agora -> trial ativo (acesso com restricoes)
+4. Se subscription_status === 'active' e nao expirou -> acesso total
+5. Caso contrario -> needsPayment = true -> redireciona para /payment
 ```
 
-Remover o tratamento especifico de "Email not confirmed" no login, pois nao sera mais necessario.
+### 4. Admin Dashboard - Limpeza
 
-## Resultado Esperado
-1. Usuario cria conta -> entra automaticamente -> redirecionado pelo paywall para `/payment`
-2. Sem etapa de confirmacao de e-mail
-3. Fluxo limpo e direto
+- Remover contagem de "Pendentes" dos cards de estatisticas
+- Manter botoes "Ativar" e "Bloquear" (ativar serve para desbloquear)
+
+### 5. Ficheiros que NAO mudam
+
+- `src/pages/Payment.tsx` - Ja esta funcional
+- `src/pages/Config.tsx` - Ja tem export bloqueado no trial e botao encerrar conta
+- `src/pages/Dashboard.tsx` - Ja tem PaymentChecker
+- `supabase/functions/create-checkout/index.ts` - Ja funcional
+- `supabase/functions/check-payment/index.ts` - Ja funcional
+
+## Detalhes Tecnicos
+
+### Migracao SQL
+```sql
+ALTER TABLE public.profiles 
+  ALTER COLUMN status SET DEFAULT 'active';
+
+UPDATE public.profiles 
+  SET status = 'active' 
+  WHERE status = 'pending';
+```
+
+### useBlockedCheck.ts - Nova logica simplificada
+- Remover estado `isPending` e setter
+- Na funcao `checkStatus`: se status === 'blocked', retornar blocked
+- Verificar admin e legacy -> sem paywall
+- Verificar trial (trial_started_at + 3 dias)
+- Verificar assinatura ativa
+- Caso contrario -> needsPayment
+
+### App.tsx
+- Remover `isPending` de `ProtectedRoute` e `AppWithChat`
+- Remover rota `/pending`
+- Remover import de `Pending`
+
+### AdminDashboard.tsx
+- Remover card "Pendentes" e filtro `pendingUsers`
+- Badge de status: mostrar apenas "Ativo" ou "Bloqueado"
 
