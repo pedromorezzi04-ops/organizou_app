@@ -96,7 +96,7 @@ const NewTransactionDialog = ({ open, onOpenChange, type }: NewTransactionDialog
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md glass-strong rounded-2xl shadow-lift">
         <DialogHeader>
           <DialogTitle>
             {isIncome ? 'Nova Entrada' : 'Nova Saída'}

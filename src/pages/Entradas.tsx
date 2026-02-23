@@ -41,53 +41,52 @@ const Entradas = () => {
       });
     } else {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      toast({
-        title: "Entrada removida",
-      });
+      toast({ title: "Entrada removida" });
     }
   };
 
   return (
     <Layout title="Entradas">
       <div className="space-y-4">
-        {/* Header com botão de adicionar */}
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              Registre tudo que entrou
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Registre tudo que entrou
+          </p>
           <Button onClick={() => setDialogOpen(true)} size="sm" className="gap-2">
             <Plus className="w-4 h-4" />
             Novo
           </Button>
         </div>
 
-        {/* Lista de transações */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           {isLoading ? (
             <>
-              <Skeleton className="h-16 rounded-xl" />
-              <Skeleton className="h-16 rounded-xl" />
-              <Skeleton className="h-16 rounded-xl" />
+              {[0, 1, 2].map(i => (
+                <Skeleton key={i} className="h-[72px] rounded-xl" style={{ animationDelay: `${i * 100}ms` }} />
+              ))}
             </>
           ) : incomeTransactions.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 mx-auto bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mb-4">
-                <TrendingUp className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+            <div className="text-center py-16 animate-fade-in">
+              <div className="w-20 h-20 mx-auto bg-gradient-to-br from-emerald to-emerald/60 rounded-3xl flex items-center justify-center mb-4 shadow-lift">
+                <TrendingUp className="w-10 h-10 text-primary-foreground" />
               </div>
-              <p className="text-muted-foreground">Nenhuma entrada registrada</p>
+              <p className="font-medium text-foreground">Nenhuma entrada registrada</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Toque em "Novo" para adicionar
+                Toque em "Novo" para adicionar sua primeira venda
               </p>
             </div>
           ) : (
-            incomeTransactions.map((transaction) => (
-              <TransactionCard 
-                key={transaction.id} 
-                transaction={transaction} 
-                onDelete={handleDelete}
-              />
+            incomeTransactions.map((transaction, index) => (
+              <div
+                key={transaction.id}
+                className="animate-slide-up"
+                style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'both' }}
+              >
+                <TransactionCard
+                  transaction={transaction}
+                  onDelete={handleDelete}
+                />
+              </div>
             ))
           )}
         </div>
@@ -102,44 +101,58 @@ const Entradas = () => {
   );
 };
 
-const TransactionCard = ({ 
-  transaction, 
-  onDelete 
-}: { 
+const TransactionCard = ({
+  transaction,
+  onDelete,
+}: {
   transaction: Transaction;
   onDelete: (id: string) => void;
 }) => {
   const isPaid = transaction.status === 'paid';
-  
+
   return (
-    <div className="bg-card border border-border rounded-xl p-4">
+    <div className={cn(
+      "glass rounded-xl p-4 shadow-card transition-all duration-200",
+      "hover:shadow-lift hover:-translate-y-0.5 active:scale-[0.98]",
+      "border",
+      isPaid ? "border-emerald/20" : "border-amber/20"
+    )}>
       <div className="flex items-center gap-3">
+        {/* Status indicator with glow */}
         <div className={cn(
-          "w-10 h-10 rounded-lg flex items-center justify-center",
-          isPaid 
-            ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
-            : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+          "relative w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+          isPaid
+            ? "bg-emerald-light text-emerald"
+            : "bg-amber-light text-amber"
         )}>
           {isPaid ? <Check className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+          {/* Glow effect */}
+          <div className={cn(
+            "absolute inset-0 rounded-xl opacity-40 blur-md -z-10",
+            isPaid ? "bg-emerald" : "bg-amber animate-pulse"
+          )} />
         </div>
+
         <div className="flex-1 min-w-0">
-          <p className="font-medium truncate">{transaction.description}</p>
+          <p className="font-medium truncate text-foreground">{transaction.description}</p>
           <p className="text-xs text-muted-foreground">
             {format(new Date(transaction.created_at), "dd 'de' MMM", { locale: ptBR })}
             {transaction.payment_method && ` • ${transaction.payment_method}`}
           </p>
         </div>
-        <div className="text-right mr-2">
-          <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+
+        <div className="text-right mr-1">
+          <p className="font-semibold text-emerald">
             {formatCurrency(Number(transaction.amount))}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground">
             {isPaid ? 'Recebido' : 'Pendente'}
           </p>
         </div>
+
         <button
           onClick={() => onDelete(transaction.id)}
-          className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+          className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
           aria-label="Remover entrada"
         >
           <Trash2 className="w-4 h-4" />

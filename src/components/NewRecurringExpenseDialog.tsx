@@ -81,7 +81,7 @@ const NewRecurringExpenseDialog = ({ open, onOpenChange }: NewRecurringExpenseDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md glass-strong rounded-2xl shadow-lift">
         <DialogHeader>
           <DialogTitle>Nova Despesa Fixa</DialogTitle>
         </DialogHeader>
