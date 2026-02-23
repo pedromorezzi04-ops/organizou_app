@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 export const useBlockedCheck = () => {
   const { user, signOut } = useAuth();
   const [isBlocked, setIsBlocked] = useState(false);
-  const [isPending, setIsPending] = useState(false);
   const [needsPayment, setNeedsPayment] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -13,54 +12,69 @@ export const useBlockedCheck = () => {
 
   const checkStatus = useCallback(async (uid: string) => {
     try {
-      const { data, error } = await supabase.rpc('get_user_status', {
+      // 1. Check if blocked
+      const { data: status, error } = await supabase.rpc('get_user_status', {
         _user_id: uid
       });
 
       if (error) {
         console.error('Error checking user status:', error);
-        return { status: 'pending' as const, needsPayment: false };
+        return { blocked: false, needsPayment: false };
       }
 
-      const status = (data || 'pending') as string;
+      if (status === 'blocked') {
+        return { blocked: true, needsPayment: false };
+      }
 
-      // Check subscription status
-      let subNeedsPayment = false;
-      if (status === 'active') {
-        const { data: subData } = await supabase.rpc('get_subscription_info', {
-          _user_id: uid,
-        });
-        if (subData && subData.length > 0) {
-          const info = subData[0];
-          if (!info.is_legacy) {
-            // Check admin
-            const { data: isAdmin } = await supabase.rpc('has_role', {
-              _user_id: uid,
-              _role: 'admin' as const,
-            });
-            if (!isAdmin) {
-              if (info.subscription_status === 'trial' && info.trial_started_at) {
-                const trialEnd = new Date(info.trial_started_at);
-                trialEnd.setDate(trialEnd.getDate() + 3);
-                if (new Date() > trialEnd) {
-                  subNeedsPayment = true;
-                }
-              } else if (info.subscription_status === 'active' && info.subscription_expires_at) {
-                if (new Date() > new Date(info.subscription_expires_at)) {
-                  subNeedsPayment = true;
-                }
-              } else if (info.subscription_status === 'expired') {
-                subNeedsPayment = true;
-              }
-            }
-          }
+      // 2. Check admin or legacy
+      const { data: subData } = await supabase.rpc('get_subscription_info', {
+        _user_id: uid,
+      });
+
+      if (!subData || subData.length === 0) {
+        return { blocked: false, needsPayment: true };
+      }
+
+      const info = subData[0];
+
+      // Legacy users have full access
+      if (info.is_legacy) {
+        return { blocked: false, needsPayment: false };
+      }
+
+      // Admin has full access
+      const { data: isAdmin } = await supabase.rpc('has_role', {
+        _user_id: uid,
+        _role: 'admin' as const,
+      });
+      if (isAdmin) {
+        return { blocked: false, needsPayment: false };
+      }
+
+      // 3. Check trial (3 days from trial_started_at)
+      if (info.subscription_status === 'trial' && info.trial_started_at) {
+        const trialEnd = new Date(info.trial_started_at);
+        trialEnd.setDate(trialEnd.getDate() + 3);
+        if (new Date() <= trialEnd) {
+          return { blocked: false, needsPayment: false };
         }
+        // Trial expired
+        return { blocked: false, needsPayment: true };
       }
 
-      return { status, needsPayment: subNeedsPayment };
+      // 4. Check active subscription
+      if (info.subscription_status === 'active' && info.subscription_expires_at) {
+        if (new Date() <= new Date(info.subscription_expires_at)) {
+          return { blocked: false, needsPayment: false };
+        }
+        return { blocked: false, needsPayment: true };
+      }
+
+      // 5. Expired or no valid subscription
+      return { blocked: false, needsPayment: true };
     } catch (err) {
       console.error('Error checking user status:', err);
-      return { status: 'pending' as const, needsPayment: false };
+      return { blocked: false, needsPayment: false };
     }
   }, []);
 
@@ -69,7 +83,6 @@ export const useBlockedCheck = () => {
 
     if (!userId) {
       setIsBlocked(false);
-      setIsPending(false);
       setNeedsPayment(false);
       setLoading(false);
       return;
@@ -77,10 +90,9 @@ export const useBlockedCheck = () => {
 
     setLoading(true);
 
-    checkStatus(userId).then(({ status, needsPayment: np }) => {
+    checkStatus(userId).then(({ blocked, needsPayment: np }) => {
       if (cancelled) return;
-      setIsBlocked(status === 'blocked');
-      setIsPending(status === 'pending');
+      setIsBlocked(blocked);
       setNeedsPayment(np);
       setLoading(false);
     });
@@ -98,10 +110,9 @@ export const useBlockedCheck = () => {
         (payload) => {
           if (cancelled) return;
           const newStatus = (payload.new as { status?: string }).status;
-          if (!newStatus) return;
-          setIsBlocked(newStatus === 'blocked');
-          setIsPending(newStatus === 'pending');
-          // Re-check subscription on profile change
+          if (newStatus) {
+            setIsBlocked(newStatus === 'blocked');
+          }
           checkStatus(userId).then(({ needsPayment: np }) => {
             if (cancelled) return;
             setNeedsPayment(np);
@@ -120,9 +131,8 @@ export const useBlockedCheck = () => {
     if (!userId) return;
 
     const interval = setInterval(() => {
-      checkStatus(userId).then(({ status, needsPayment: np }) => {
-        setIsBlocked(status === 'blocked');
-        setIsPending(status === 'pending');
+      checkStatus(userId).then(({ blocked, needsPayment: np }) => {
+        setIsBlocked(blocked);
         setNeedsPayment(np);
       });
     }, 60 * 60 * 1000);
@@ -130,5 +140,5 @@ export const useBlockedCheck = () => {
     return () => clearInterval(interval);
   }, [userId, checkStatus]);
 
-  return { isBlocked, isPending, needsPayment, loading, signOut };
+  return { isBlocked, needsPayment, loading, signOut };
 };
