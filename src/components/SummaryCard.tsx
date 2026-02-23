@@ -6,39 +6,62 @@ interface SummaryCardProps {
   value: number;
   icon: ReactNode;
   variant: 'income' | 'expense' | 'pending' | 'forecast';
+  index?: number;
 }
 
-const variantStyles = {
-  income: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400',
-  expense: 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400',
-  pending: 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400',
-  forecast: 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400',
+const variantConfig = {
+  income: {
+    bg: 'bg-emerald-light/60 dark:bg-emerald-light/40',
+    text: 'text-emerald',
+    icon: 'bg-emerald/10 text-emerald',
+    border: 'border-emerald/10',
+  },
+  expense: {
+    bg: 'bg-destructive/5 dark:bg-destructive/10',
+    text: 'text-destructive',
+    icon: 'bg-destructive/10 text-destructive',
+    border: 'border-destructive/10',
+  },
+  pending: {
+    bg: 'bg-amber-light/60 dark:bg-amber-light/40',
+    text: 'text-amber',
+    icon: 'bg-amber/10 text-amber',
+    border: 'border-amber/10',
+  },
+  forecast: {
+    bg: 'bg-primary/5 dark:bg-primary/10',
+    text: 'text-primary',
+    icon: 'bg-primary/10 text-primary',
+    border: 'border-primary/10',
+  },
 };
 
-const iconStyles = {
-  income: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400',
-  expense: 'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400',
-  pending: 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400',
-  forecast: 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400',
-};
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value);
-};
+const SummaryCard = ({ title, value, icon, variant, index = 0 }: SummaryCardProps) => {
+  const config = variantConfig[variant];
 
-const SummaryCard = ({ title, value, icon, variant }: SummaryCardProps) => {
   return (
-    <div className={cn("rounded-xl p-4", variantStyles[variant])}>
-      <div className="flex items-center gap-3">
-        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", iconStyles[variant])}>
+    <div
+      className={cn(
+        "rounded-xl p-4 border shadow-card backdrop-blur-sm",
+        "transition-all duration-200 hover:shadow-lift hover:-translate-y-0.5",
+        "animate-fade-in",
+        config.bg,
+        config.border
+      )}
+      style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'backwards' }}
+    >
+      <div className="flex items-start gap-3">
+        <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", config.icon)}>
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium opacity-80 truncate">{title}</p>
-          <p className="text-lg font-bold truncate">{formatCurrency(value)}</p>
+          <p className="text-xs font-medium text-muted-foreground truncate">{title}</p>
+          <p className={cn("text-lg font-bold truncate tabular-nums mt-0.5", config.text)}>
+            {formatCurrency(value)}
+          </p>
         </div>
       </div>
     </div>
