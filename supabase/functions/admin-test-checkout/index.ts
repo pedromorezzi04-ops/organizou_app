@@ -99,6 +99,7 @@ Deno.serve(async (req) => {
             name: (claimsData.claims.email as string).split("@")[0],
             email: claimsData.claims.email as string,
             cellphone: "11999999999",
+            taxId: "00000000000",
           },
         }),
       });
