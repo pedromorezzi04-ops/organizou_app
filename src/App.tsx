@@ -18,7 +18,6 @@ import Tabelas from "./pages/Tabelas";
 import Impostos from "./pages/Impostos";
 import Config from "./pages/Config";
 import Blocked from "./pages/Blocked";
-import Pending from "./pages/Pending";
 import Payment from "./pages/Payment";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
@@ -27,7 +26,7 @@ const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  const { isBlocked, isPending, needsPayment, loading: statusLoading } = useUserStatus();
+  const { isBlocked, needsPayment, loading: statusLoading } = useUserStatus();
   
   if (loading || statusLoading) {
     return (
@@ -43,10 +42,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (isBlocked) {
     return <Navigate to="/blocked" replace />;
-  }
-
-  if (isPending) {
-    return <Navigate to="/pending" replace />;
   }
 
   if (needsPayment) {
@@ -79,7 +74,6 @@ const AppRoutes = () => (
     <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
     <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/blocked" element={<Blocked />} />
-    <Route path="/pending" element={<Pending />} />
     <Route path="/payment" element={<Payment />} />
     <Route path="/admin-secret-dashboard" element={<AdminDashboard />} />
     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -96,12 +90,12 @@ const AppRoutes = () => (
 
 const AppWithChat = () => {
   const { user } = useAuth();
-  const { isBlocked, isPending, needsPayment } = useUserStatus();
+  const { isBlocked, needsPayment } = useUserStatus();
   
   return (
     <>
       <AppRoutes />
-      {user && !isBlocked && !isPending && !needsPayment && <ChatWidget />}
+      {user && !isBlocked && !needsPayment && <ChatWidget />}
     </>
   );
 };
