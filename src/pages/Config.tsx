@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Upload, LogOut, Download, Shield, Lock } from 'lucide-react';
+import { Loader2, Upload, LogOut, Download, Shield, Lock, AlertTriangle, Trash2 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,17 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAllTransactions, useAllInstallments, useRecurringExpenses } from '@/hooks/useFinancialData';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const Config = () => {
   const navigate = useNavigate();
@@ -100,6 +111,35 @@ const Config = () => {
     await signOut();
   };
 
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      // Delete user data in order
+      await supabase.from('transactions').delete().eq('user_id', user.id);
+      await supabase.from('installments').delete().eq('user_id', user.id);
+      await supabase.from('recurring_expenses').delete().eq('user_id', user.id);
+      await supabase.from('tax_payments').delete().eq('user_id', user.id);
+      await supabase.from('profiles').delete().eq('user_id', user.id);
+      
+      await signOut();
+      toast({
+        title: "Conta encerrada",
+        description: "Todos os seus dados foram removidos.",
+      });
+    } catch {
+      toast({
+        title: "Erro",
+        description: "Não foi possível encerrar a conta. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <Layout title="Configurações">
       <div className="space-y-6">
@@ -169,6 +209,48 @@ const Config = () => {
             <LogOut className="w-4 h-4" />
             Sair
           </Button>
+        </div>
+
+        {/* Encerrar conta */}
+        <div className="space-y-3 pt-4 border-t border-destructive/20">
+          <h2 className="text-lg font-semibold text-destructive flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5" />
+            Zona de Perigo
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Ao encerrar sua conta, todos os dados serão removidos permanentemente.
+          </p>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" className="w-full gap-2 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive">
+                <Trash2 className="w-4 h-4" />
+                Encerrar Conta
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                  Encerrar conta permanentemente?
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-left space-y-2">
+                  <span className="font-semibold text-destructive block">Atenção: esta ação é irreversível.</span>
+                  Todos os seus dados de transações, notinhas, despesas recorrentes e configurações serão apagados permanentemente.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Sim, encerrar minha conta
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         {/* Painel Admin - apenas para admins */}
