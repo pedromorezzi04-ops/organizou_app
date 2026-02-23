@@ -130,6 +130,7 @@ Deno.serve(async (req) => {
           name: customerName,
           email: userEmail,
           cellphone: "11999999999",
+          taxId: "00000000000",
         },
       }),
     });
