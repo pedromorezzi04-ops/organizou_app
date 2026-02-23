@@ -129,6 +129,7 @@ Deno.serve(async (req) => {
         customer: {
           name: customerName,
           email: userEmail,
+          cellphone: "11999999999",
         },
       }),
     });
