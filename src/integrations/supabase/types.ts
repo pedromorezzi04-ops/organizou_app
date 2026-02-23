@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+        }
+        Relationships: []
+      }
       installments: {
         Row: {
           created_at: string
@@ -61,12 +82,16 @@ export type Database = {
           business_name: string | null
           created_at: string
           id: string
+          is_legacy: boolean
           logo_url: string | null
           primary_color: string | null
           status: string
+          subscription_expires_at: string | null
+          subscription_status: string
           tax_fixed_value: number | null
           tax_percentage: number | null
           tax_type: string | null
+          trial_started_at: string | null
           updated_at: string
           user_id: string
         }
@@ -74,12 +99,16 @@ export type Database = {
           business_name?: string | null
           created_at?: string
           id?: string
+          is_legacy?: boolean
           logo_url?: string | null
           primary_color?: string | null
           status?: string
+          subscription_expires_at?: string | null
+          subscription_status?: string
           tax_fixed_value?: number | null
           tax_percentage?: number | null
           tax_type?: string | null
+          trial_started_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -87,12 +116,16 @@ export type Database = {
           business_name?: string | null
           created_at?: string
           id?: string
+          is_legacy?: boolean
           logo_url?: string | null
           primary_color?: string | null
           status?: string
+          subscription_expires_at?: string | null
+          subscription_status?: string
           tax_fixed_value?: number | null
           tax_percentage?: number | null
           tax_type?: string | null
+          trial_started_at?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -128,6 +161,27 @@ export type Database = {
           name?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          created_at: string
+          key_name: string
+          key_value: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          key_name: string
+          key_value: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          key_name?: string
+          key_value?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -253,6 +307,16 @@ export type Database = {
         Args: { _status: string; _user_id: string }
         Returns: boolean
       }
+      get_subscription_info: {
+        Args: { _user_id: string }
+        Returns: {
+          is_legacy: boolean
+          subscription_expires_at: string
+          subscription_status: string
+          trial_started_at: string
+        }[]
+      }
+      get_system_setting: { Args: { _key: string }; Returns: string }
       get_user_status: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -263,6 +327,7 @@ export type Database = {
       }
       is_user_blocked: { Args: { _user_id: string }; Returns: boolean }
       is_user_pending: { Args: { _user_id: string }; Returns: boolean }
+      validate_coupon: { Args: { _code: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"

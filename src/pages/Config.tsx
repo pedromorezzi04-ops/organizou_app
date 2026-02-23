@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Upload, LogOut, Download, Shield } from 'lucide-react';
+import { Loader2, Upload, LogOut, Download, Shield, Lock } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
+import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAllTransactions, useAllInstallments, useRecurringExpenses } from '@/hooks/useFinancialData';
@@ -15,6 +16,7 @@ const Config = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdminCheck();
+  const { canExport, state: subState, trialDaysLeft } = useSubscription();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [businessName, setBusinessName] = useState('');
@@ -141,10 +143,22 @@ const Config = () => {
         {/* Exportar dados */}
         <div className="space-y-4 pt-4 border-t">
           <h2 className="text-lg font-semibold">Dados</h2>
-          <Button variant="outline" onClick={exportData} className="w-full gap-2">
-            <Download className="w-4 h-4" />
-            Exportar todos os dados
-          </Button>
+          {canExport ? (
+            <Button variant="outline" onClick={exportData} className="w-full gap-2">
+              <Download className="w-4 h-4" />
+              Exportar todos os dados
+            </Button>
+          ) : (
+            <div className="space-y-2">
+              <Button variant="outline" disabled className="w-full gap-2 opacity-50">
+                <Lock className="w-4 h-4" />
+                Exportar todos os dados
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Disponível apenas para assinantes
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Conta */}
