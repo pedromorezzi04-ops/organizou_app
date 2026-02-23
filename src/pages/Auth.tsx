@@ -113,6 +113,18 @@ const Auth = () => {
               description: "Este e-mail já está em uso. Tente fazer login.",
               variant: "destructive",
             });
+          } else if (
+            error.message.toLowerCase().includes('password') &&
+            (error.message.toLowerCase().includes('leaked') ||
+             error.message.toLowerCase().includes('pwned') ||
+             error.message.toLowerCase().includes('breached') ||
+             error.message.toLowerCase().includes('weak'))
+          ) {
+            toast({
+              title: "Senha insegura",
+              description: "Esta senha foi encontrada em vazamentos globais. Por favor, escolha uma mais segura para sua proteção.",
+              variant: "destructive",
+            });
           } else {
             toast({
               title: "Erro no cadastro",
