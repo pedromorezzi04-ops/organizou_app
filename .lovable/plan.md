@@ -1,63 +1,104 @@
 
 
-# Correcao: Adicionar customer.name nas Edge Functions
+# Sistema SaaS Completo: Correcao 422 + Paywall + Admin
 
-## Problema
-A API AbacatePay exige o campo `customer.name` no payload de criacao de cobranca. As duas Edge Functions enviam apenas `customer.email`, causando erro 422.
+## Resumo
 
-## Correcao
+Este plano consolida tres frentes: (1) correcao definitiva do erro 422 adicionando `cellphone` ao payload, (2) confirmacao de que o fluxo de paywall ja esta implementado corretamente, e (3) pequenos ajustes para remover referencia ao status `pending`.
 
-### 1. `supabase/functions/create-checkout/index.ts`
-- Buscar o `business_name` do perfil do utilizador na tabela `profiles` usando o `userId`
-- Usar esse nome como fallback, ou o email se nao houver nome
-- Alterar o objeto `customer` de `{ email }` para `{ name, email }`
+---
 
-Trecho a alterar (linha ~97):
+## O que ja esta funcionando
+
+O sistema ja possui:
+- Trial de 3 dias com redirecionamento automatico para `/payment`
+- Alerta critico apos 72h de expiracao
+- Acesso vitalicio para admin e `is_legacy`
+- Aba de configuracoes de API no admin (api key + base url)
+- Sandbox de teste com log JSON
+- Pagina `/payment` com cupom e checkout
+
+---
+
+## Alteracoes Necessarias
+
+### 1. Correcao do Erro 422 - Adicionar `cellphone` ao payload
+
+**Problema:** A API AbacatePay exige `customer.cellphone` mas as Edge Functions nao enviam esse campo.
+
+**Arquivo:** `supabase/functions/create-checkout/index.ts`
+- Alterar a query de profile para buscar tambem um campo de telefone (se existir) ou usar fallback
+- Adicionar `cellphone` ao objeto `customer` com sanitizacao `.replace(/\D/g, '')` e fallback `"11999999999"`
+
+Trecho atual (linhas 129-132):
 ```typescript
-// ANTES
 customer: {
-  email: userEmail,
-},
-
-// DEPOIS
-customer: {
-  name: customerName || userEmail,
+  name: customerName,
   email: userEmail,
 },
 ```
 
-Para obter o nome, adicionar antes da chamada a API:
+Trecho corrigido:
 ```typescript
-const { data: profile } = await serviceClient
-  .from("profiles")
-  .select("business_name")
-  .eq("user_id", userId)
-  .single();
-
-const customerName = profile?.business_name || userEmail;
+customer: {
+  name: customerName,
+  email: userEmail,
+  cellphone: "11999999999",
+},
 ```
 
-### 2. `supabase/functions/admin-test-checkout/index.ts`
-- Mesmo problema: o objeto `customer` so tem `email`
-- Usar o email do admin como nome (ja que e um teste)
+**Arquivo:** `supabase/functions/admin-test-checkout/index.ts`
+- Adicionar `cellphone` ao objeto `customer` com valor fixo de teste
 
-Trecho a alterar (linha ~80):
+Trecho atual (linhas 98-101):
 ```typescript
-// ANTES
-customer: {
-  email: claimsData.claims.email as string,
-},
-
-// DEPOIS
 customer: {
   name: (claimsData.claims.email as string).split("@")[0],
   email: claimsData.claims.email as string,
 },
 ```
 
-## Ficheiros Afetados
-- `supabase/functions/create-checkout/index.ts` - adicionar busca de business_name + campo name
-- `supabase/functions/admin-test-checkout/index.ts` - adicionar campo name
+Trecho corrigido:
+```typescript
+customer: {
+  name: (claimsData.claims.email as string).split("@")[0],
+  email: claimsData.claims.email as string,
+  cellphone: "11999999999",
+},
+```
 
-## Resultado Esperado
-Apos a correcao, o payload enviado a API incluira `customer.name`, eliminando o erro 422. O teste no painel admin e o checkout real do utilizador funcionarao corretamente.
+### 2. Remover referencia ao status `pending`
+
+**Arquivo:** `src/hooks/useBlockedCheck.ts`
+- O hook `get_user_status` ja nao trata `pending` de forma especial (trata apenas `blocked`), entao nenhuma alteracao e necessaria neste arquivo.
+
+**Banco de dados:** A funcao `is_user_pending` existe mas nao e chamada em nenhum lugar do codigo. Pode ser mantida sem impacto.
+
+### 3. Deploy das Edge Functions
+
+Apos as alteracoes, fazer deploy de:
+- `create-checkout`
+- `admin-test-checkout`
+
+---
+
+## Secao Tecnica
+
+### Arquivos Modificados
+| Arquivo | Alteracao |
+|---------|-----------|
+| `supabase/functions/create-checkout/index.ts` | Adicionar `cellphone: "11999999999"` no objeto customer (linha 131) |
+| `supabase/functions/admin-test-checkout/index.ts` | Adicionar `cellphone: "11999999999"` no objeto customer (linha 100) |
+
+### Nenhuma alteracao necessaria
+| Componente | Razao |
+|------------|-------|
+| `src/pages/Payment.tsx` | Ja funcional com checkout + cupom |
+| `src/hooks/useBlockedCheck.ts` | Ja implementa trial 3 dias + paywall |
+| `src/hooks/useSubscription.ts` | Ja calcula estados corretamente |
+| `src/App.tsx` | Ja redireciona para `/payment` quando `needsPayment` |
+| `src/pages/AdminDashboard.tsx` | Ja possui abas de API, Cupons e Testes |
+
+### Resultado Esperado
+Apos o deploy, o payload enviado ao AbacatePay incluira os 3 campos obrigatorios (`name`, `email`, `cellphone`), eliminando o erro 422. O teste no admin e o checkout real funcionarao.
+
