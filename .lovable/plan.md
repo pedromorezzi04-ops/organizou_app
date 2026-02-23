@@ -1,67 +1,41 @@
 
 
-# Correção do Fluxo de Cadastro e Confirmação de E-mail
+# Remover Confirmacao de E-mail no Cadastro
 
-## Problema Identificado
+## Problema
+O sistema exige confirmacao de e-mail antes de permitir login, causando erro "Email not confirmed". O usuario quer que o cadastro seja direto: cria conta e ja entra no sistema.
 
-Ao criar uma conta, o sistema exige confirmação por e-mail (comportamento correto), mas:
-1. Exibe a mensagem "Conta criada! Bem-vindo" como se tudo estivesse pronto
-2. Redireciona para o Dashboard, que rejeita o usuário por falta de sessão
-3. O usuário tenta logar e recebe "Email not confirmed" sem explicação clara
+## Solucao
 
-## Correções Planejadas
+### 1. Desativar confirmacao de e-mail
+Usar a ferramenta `configure-auth` para ativar o auto-confirm de e-mail no backend. Isso faz com que todo novo usuario ja seja considerado confirmado automaticamente.
 
-### 1. Fluxo de Signup (Auth.tsx)
-Após cadastro bem-sucedido, **nao redirecionar** para `/`. Em vez disso:
-- Exibir toast: "Conta criada! Verifique seu e-mail para confirmar o cadastro."
-- Trocar a tela para o formulario de login automaticamente (`setIsLogin(true)`)
-- Limpar os campos de senha
+### 2. Ajustar fluxo de signup (src/pages/Auth.tsx)
+Apos cadastro bem-sucedido:
+- Redirecionar imediatamente para `/` (o sistema de paywall cuidara de enviar para `/payment` se necessario)
+- Remover a logica de "fique na tela de login e verifique seu e-mail"
+- Manter tratamento de erros para senha fraca/vazada e e-mail duplicado
 
-### 2. Tratamento do erro "Email not confirmed" no Login (Auth.tsx)
-Adicionar tratamento especifico para quando o usuario tenta logar sem ter confirmado o e-mail:
-- Detectar `error.message` contendo "Email not confirmed"
-- Exibir toast amigavel: "E-mail nao confirmado. Verifique sua caixa de entrada (e o spam) para ativar sua conta."
+### Detalhes Tecnicos
 
-## Detalhes Tecnicos
+**Arquivo: `src/pages/Auth.tsx`**
 
-### Arquivo: `src/pages/Auth.tsx`
-
-**Alteracao 1 - Signup success (linhas 135-141):**
-Substituir:
+Substituir o bloco de sucesso do signup:
 ```typescript
-toast({
-  title: "Conta criada!",
-  description: "Bem-vindo ao seu controle financeiro.",
-});
-navigate('/');
-```
-Por:
-```typescript
-toast({
-  title: "Conta criada!",
-  description: "Verifique seu e-mail para confirmar o cadastro antes de fazer login.",
-});
+// DE:
+toast({ title: "Conta criada!", description: "Verifique seu e-mail..." });
 setIsLogin(true);
 setPassword('');
+
+// PARA:
+toast({ title: "Conta criada!", description: "Bem-vindo ao Organizou+!" });
+navigate('/');
 ```
 
-**Alteracao 2 - Login error handling (linhas 88-103):**
-Adicionar deteccao de "Email not confirmed" antes do bloco de "Invalid login credentials":
-```typescript
-if (error.message.includes('Email not confirmed')) {
-  toast({
-    title: "E-mail nao confirmado",
-    description: "Verifique sua caixa de entrada (e o spam) para ativar sua conta.",
-    variant: "destructive",
-  });
-} else if (error.message.includes('Invalid login credentials')) {
-  // ... existing code
-}
-```
+Remover o tratamento especifico de "Email not confirmed" no login, pois nao sera mais necessario.
 
 ## Resultado Esperado
-
-1. Usuario cria conta -> ve mensagem "Verifique seu e-mail" -> permanece na tela de login
-2. Usuario tenta logar sem confirmar -> ve mensagem explicando que precisa confirmar
-3. Usuario confirma e-mail -> faz login normalmente
+1. Usuario cria conta -> entra automaticamente -> redirecionado pelo paywall para `/payment`
+2. Sem etapa de confirmacao de e-mail
+3. Fluxo limpo e direto
 
