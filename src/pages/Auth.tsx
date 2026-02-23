@@ -88,13 +88,7 @@ const Auth = () => {
       if (isLogin) {
         const { error } = await signIn(email, password);
         if (error) {
-          if (error.message.includes('Email not confirmed')) {
-            toast({
-              title: "E-mail não confirmado",
-              description: "Verifique sua caixa de entrada (e o spam) para ativar sua conta.",
-              variant: "destructive",
-            });
-          } else if (error.message.includes('Invalid login credentials')) {
+          if (error.message.includes('Invalid login credentials')) {
             toast({
               title: "Erro no login",
               description: "E-mail ou senha incorretos.",
@@ -141,10 +135,9 @@ const Auth = () => {
         } else {
           toast({
             title: "Conta criada!",
-            description: "Verifique seu e-mail para confirmar o cadastro antes de fazer login.",
+            description: "Bem-vindo ao Organizou+!",
           });
-          setIsLogin(true);
-          setPassword('');
+          navigate('/');
         }
       }
     } catch (error) {
