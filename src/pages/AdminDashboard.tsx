@@ -120,6 +120,7 @@ const ApiSettingsTab = () => {
   const [endpoint, setEndpoint] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -147,29 +148,82 @@ const ApiSettingsTab = () => {
     finally { setSaving(false); }
   };
 
+  const webhookUrl = `https://lvbxrfxfhrgsleuuemcb.supabase.co/functions/v1/payment-webhook`;
+
+  const curlExample = `curl -X POST '${webhookUrl}' \\
+  -H 'Content-Type: application/json' \\
+  -d '{
+    "data": {
+      "billing": {
+        "status": "PAID",
+        "metadata": {
+          "userId": "USER_ID_AQUI"
+        }
+      }
+    }
+  }'`;
+
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    toast.success('Copiado!');
+    setTimeout(() => setCopied(null), 2000);
+  };
+
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" />Configurações de API</CardTitle>
-        <CardDescription>Configure a integração com o AbacatePay</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label>Chave da API AbacatePay</Label>
-          <Input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="apt_..." type="password" />
-        </div>
-        <div className="space-y-2">
-          <Label>Endpoint de Cobrança</Label>
-          <Input value={endpoint} onChange={(e) => setEndpoint(e.target.value)} placeholder="https://api.abacatepay.com/v1/billing/create" />
-        </div>
-        <Button onClick={save} disabled={saving} className="w-full">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-          Salvar Configurações
-        </Button>
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" />Configurações de API</CardTitle>
+          <CardDescription>Configure a integração com o AbacatePay</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Chave da API AbacatePay</Label>
+            <Input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="apt_..." type="password" />
+          </div>
+          <div className="space-y-2">
+            <Label>Endpoint de Cobrança</Label>
+            <Input value={endpoint} onChange={(e) => setEndpoint(e.target.value)} placeholder="https://api.abacatepay.com/v1/billing/create" />
+          </div>
+          <Button onClick={save} disabled={saving} className="w-full">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            Salvar Configurações
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base"><Tag className="w-4 h-4" />Webhook & cURL</CardTitle>
+          <CardDescription>Use no painel do AbacatePay ou teste manualmente</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>URL do Webhook</Label>
+            <div className="flex gap-2">
+              <Input value={webhookUrl} readOnly className="font-mono text-xs" />
+              <Button variant="outline" size="sm" onClick={() => copyToClipboard(webhookUrl, 'webhook')}>
+                {copied === 'webhook' ? '✓' : 'Copiar'}
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Exemplo cURL (teste)</Label>
+            <div className="relative">
+              <pre className="bg-muted/50 border rounded-lg p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all text-foreground/80">
+                {curlExample}
+              </pre>
+              <Button variant="outline" size="sm" className="absolute top-2 right-2" onClick={() => copyToClipboard(curlExample, 'curl')}>
+                {copied === 'curl' ? '✓' : 'Copiar'}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
