@@ -93,6 +93,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Fetch customer name from profile
+    const { data: profile } = await serviceClient
+      .from("profiles")
+      .select("business_name")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const customerName = profile?.business_name || userEmail;
+
     const origin = req.headers.get("origin") || "https://easy-funds.lovable.app";
 
     // Create billing on AbacatePay using the correct payload format
@@ -118,6 +127,7 @@ Deno.serve(async (req) => {
         returnUrl: `${origin}/?status=checking`,
         completionUrl: `${origin}/?status=checking`,
         customer: {
+          name: customerName,
           email: userEmail,
         },
       }),

@@ -96,6 +96,7 @@ Deno.serve(async (req) => {
           returnUrl: `${origin}/admin-secret-dashboard`,
           completionUrl: `${origin}/admin-secret-dashboard`,
           customer: {
+            name: (claimsData.claims.email as string).split("@")[0],
             email: claimsData.claims.email as string,
           },
         }),
