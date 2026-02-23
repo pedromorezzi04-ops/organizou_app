@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Shield, Users, UserCheck, UserX, RefreshCw, Settings, Tag, Plus, Trash2, Loader2 } from 'lucide-react';
+import { Shield, Users, UserCheck, UserX, RefreshCw, Settings, Tag, Plus, Trash2, Loader2, Send, Play } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
@@ -114,13 +114,106 @@ const UsersTab = () => {
   );
 };
 
+// ─── API Client ───
+const ApiClient = () => {
+  const [method, setMethod] = useState('GET');
+  const [url, setUrl] = useState('');
+  const [body, setBody] = useState('');
+  const [responseData, setResponseData] = useState<string | null>(null);
+  const [responseStatus, setResponseStatus] = useState<number | null>(null);
+  const [sending, setSending] = useState(false);
+
+  const sendRequest = async () => {
+    if (!url.trim()) { toast.error('Informe a URL'); return; }
+    setSending(true);
+    setResponseData(null);
+    setResponseStatus(null);
+    try {
+      const options: RequestInit = {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+      };
+      if (['POST', 'PUT', 'PATCH'].includes(method) && body.trim()) {
+        options.body = body;
+      }
+      const res = await fetch(url, options);
+      setResponseStatus(res.status);
+      const text = await res.text();
+      try {
+        setResponseData(JSON.stringify(JSON.parse(text), null, 2));
+      } catch {
+        setResponseData(text);
+      }
+    } catch (err: any) {
+      setResponseData(`Erro: ${err.message}`);
+      setResponseStatus(0);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <select
+          value={method}
+          onChange={(e) => setMethod(e.target.value)}
+          className="flex h-10 rounded-xl border border-input bg-card/60 px-3 py-2 text-sm font-mono font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <option>GET</option>
+          <option>POST</option>
+          <option>PUT</option>
+          <option>PATCH</option>
+          <option>DELETE</option>
+        </select>
+        <Input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://api.example.com/endpoint"
+          className="font-mono text-xs flex-1"
+        />
+        <Button onClick={sendRequest} disabled={sending} size="sm" className="gap-1.5">
+          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          Enviar
+        </Button>
+      </div>
+
+      {['POST', 'PUT', 'PATCH'].includes(method) && (
+        <div className="space-y-1.5">
+          <Label className="text-xs">Body (JSON)</Label>
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder='{"key": "value"}'
+            className="flex min-h-[100px] w-full rounded-xl border border-input bg-card/60 backdrop-blur-sm px-3 py-2 text-xs font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 resize-y"
+          />
+        </div>
+      )}
+
+      {responseData !== null && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <Label className="text-xs">Resposta</Label>
+            <Badge variant={responseStatus && responseStatus >= 200 && responseStatus < 300 ? 'default' : 'destructive'}
+              className={responseStatus && responseStatus >= 200 && responseStatus < 300 ? 'bg-emerald-500 text-xs' : 'text-xs'}>
+              {responseStatus === 0 ? 'Erro' : responseStatus}
+            </Badge>
+          </div>
+          <pre className="bg-muted/50 border rounded-lg p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all text-foreground/80 max-h-[300px] overflow-y-auto">
+            {responseData}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── API Settings Tab ───
 const ApiSettingsTab = () => {
   const [apiKey, setApiKey] = useState('');
   const [endpoint, setEndpoint] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -146,28 +239,6 @@ const ApiSettingsTab = () => {
       toast.success('Configurações salvas!');
     } catch { toast.error('Erro ao salvar'); }
     finally { setSaving(false); }
-  };
-
-  const webhookUrl = `https://lvbxrfxfhrgsleuuemcb.supabase.co/functions/v1/payment-webhook`;
-
-  const curlExample = `curl -X POST '${webhookUrl}' \\
-  -H 'Content-Type: application/json' \\
-  -d '{
-    "data": {
-      "billing": {
-        "status": "PAID",
-        "metadata": {
-          "userId": "USER_ID_AQUI"
-        }
-      }
-    }
-  }'`;
-
-  const copyToClipboard = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(key);
-    toast.success('Copiado!');
-    setTimeout(() => setCopied(null), 2000);
   };
 
   if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -197,30 +268,11 @@ const ApiSettingsTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><Tag className="w-4 h-4" />Webhook & cURL</CardTitle>
-          <CardDescription>Use no painel do AbacatePay ou teste manualmente</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-base"><Play className="w-4 h-4" />API Client</CardTitle>
+          <CardDescription>Faça requisições HTTP direto do painel</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>URL do Webhook</Label>
-            <div className="flex gap-2">
-              <Input value={webhookUrl} readOnly className="font-mono text-xs" />
-              <Button variant="outline" size="sm" onClick={() => copyToClipboard(webhookUrl, 'webhook')}>
-                {copied === 'webhook' ? '✓' : 'Copiar'}
-              </Button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Exemplo cURL (teste)</Label>
-            <div className="relative">
-              <pre className="bg-muted/50 border rounded-lg p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all text-foreground/80">
-                {curlExample}
-              </pre>
-              <Button variant="outline" size="sm" className="absolute top-2 right-2" onClick={() => copyToClipboard(curlExample, 'curl')}>
-                {copied === 'curl' ? '✓' : 'Copiar'}
-              </Button>
-            </div>
-          </div>
+        <CardContent>
+          <ApiClient />
         </CardContent>
       </Card>
     </div>
