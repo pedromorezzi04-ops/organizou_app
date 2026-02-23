@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAllTransactions, useRecurringExpenses, Transaction, RecurringExpense } from '@/hooks/useFinancialData';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import NewTransactionDialog from '@/components/NewTransactionDialog';
 import NewRecurringExpenseDialog from '@/components/NewRecurringExpenseDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,11 +45,7 @@ const Saidas = () => {
       .eq('id', id);
 
     if (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível remover a saída.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Não foi possível remover a saída.", variant: "destructive" });
     } else {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toast({ title: "Saída removida" });
@@ -62,11 +59,7 @@ const Saidas = () => {
       .eq('id', id);
 
     if (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível remover a despesa fixa.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Não foi possível remover a despesa fixa.", variant: "destructive" });
     } else {
       queryClient.invalidateQueries({ queryKey: ['recurring_expenses'] });
       toast({ title: "Despesa fixa removida" });
@@ -76,12 +69,23 @@ const Saidas = () => {
   return (
     <Layout title="Saídas">
       <Tabs defaultValue="variaveis" className="space-y-4">
-        <TabsList className="w-full">
-          <TabsTrigger value="variaveis" className="flex-1">Variáveis</TabsTrigger>
-          <TabsTrigger value="fixas" className="flex-1">Fixas</TabsTrigger>
+        {/* Modern iOS-style tabs */}
+        <TabsList className="w-full h-12 p-1 glass-strong rounded-2xl shadow-card">
+          <TabsTrigger
+            value="variaveis"
+            className="flex-1 rounded-xl text-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:shadow-card data-[state=active]:text-foreground"
+          >
+            Variáveis
+          </TabsTrigger>
+          <TabsTrigger
+            value="fixas"
+            className="flex-1 rounded-xl text-sm font-medium transition-all data-[state=active]:bg-background data-[state=active]:shadow-card data-[state=active]:text-foreground"
+          >
+            Fixas
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="variaveis" className="space-y-4">
+        <TabsContent value="variaveis" className="space-y-4 animate-fade-in">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Gastos do dia a dia</p>
             <Button onClick={() => setTransactionDialogOpen(true)} size="sm" className="gap-2">
@@ -90,27 +94,28 @@ const Saidas = () => {
             </Button>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {transactionsLoading ? (
-              <>
-                <Skeleton className="h-16 rounded-xl" />
-                <Skeleton className="h-16 rounded-xl" />
-              </>
+              [0, 1, 2].map(i => (
+                <Skeleton key={i} className="h-[72px] rounded-xl" style={{ animationDelay: `${i * 100}ms` }} />
+              ))
             ) : expenseTransactions.length === 0 ? (
               <EmptyState icon={TrendingDown} message="Nenhuma saída registrada" />
             ) : (
-              expenseTransactions.map((transaction) => (
-                <ExpenseCard 
-                  key={transaction.id} 
-                  transaction={transaction} 
-                  onDelete={handleDeleteTransaction}
-                />
+              expenseTransactions.map((transaction, index) => (
+                <div
+                  key={transaction.id}
+                  className="animate-slide-up"
+                  style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'both' }}
+                >
+                  <ExpenseCard transaction={transaction} onDelete={handleDeleteTransaction} />
+                </div>
               ))
             )}
           </div>
         </TabsContent>
 
-        <TabsContent value="fixas" className="space-y-4">
+        <TabsContent value="fixas" className="space-y-4 animate-fade-in">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Contas mensais</p>
             <Button onClick={() => setRecurringDialogOpen(true)} size="sm" className="gap-2">
@@ -119,21 +124,22 @@ const Saidas = () => {
             </Button>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {recurringLoading ? (
-              <>
-                <Skeleton className="h-16 rounded-xl" />
-                <Skeleton className="h-16 rounded-xl" />
-              </>
+              [0, 1].map(i => (
+                <Skeleton key={i} className="h-[72px] rounded-xl" style={{ animationDelay: `${i * 100}ms` }} />
+              ))
             ) : recurringExpenses?.length === 0 ? (
               <EmptyState icon={Repeat} message="Nenhuma despesa fixa cadastrada" />
             ) : (
-              recurringExpenses?.map((expense) => (
-                <RecurringExpenseCard 
-                  key={expense.id} 
-                  expense={expense} 
-                  onDelete={handleDeleteRecurring}
-                />
+              recurringExpenses?.map((expense, index) => (
+                <div
+                  key={expense.id}
+                  className="animate-slide-up"
+                  style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'both' }}
+                >
+                  <RecurringExpenseCard expense={expense} onDelete={handleDeleteRecurring} />
+                </div>
               ))
             )}
           </div>
@@ -154,44 +160,47 @@ const Saidas = () => {
 };
 
 const EmptyState = ({ icon: Icon, message }: { icon: React.ElementType; message: string }) => (
-  <div className="text-center py-12">
-    <div className="w-16 h-16 mx-auto bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center mb-4">
-      <Icon className="w-8 h-8 text-red-600 dark:text-red-400" />
+  <div className="text-center py-16 animate-fade-in">
+    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-destructive to-destructive/60 rounded-3xl flex items-center justify-center mb-4 shadow-lift">
+      <Icon className="w-10 h-10 text-destructive-foreground" />
     </div>
-    <p className="text-muted-foreground">{message}</p>
+    <p className="font-medium text-foreground">{message}</p>
     <p className="text-sm text-muted-foreground mt-1">Toque em "Novo" para adicionar</p>
   </div>
 );
 
-const ExpenseCard = ({ 
-  transaction, 
-  onDelete 
-}: { 
+const ExpenseCard = ({
+  transaction,
+  onDelete,
+}: {
   transaction: Transaction;
   onDelete: (id: string) => void;
 }) => {
   const emoji = categoryIcons[transaction.category || 'outros'] || '📋';
-  
+
   return (
-    <div className="bg-card border border-border rounded-xl p-4">
+    <div className={cn(
+      "glass rounded-xl p-4 shadow-card border border-destructive/10 transition-all duration-200",
+      "hover:shadow-lift hover:-translate-y-0.5 active:scale-[0.98]"
+    )}>
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-xl">
+        <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center text-xl">
           {emoji}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium truncate">{transaction.description}</p>
+          <p className="font-medium truncate text-foreground">{transaction.description}</p>
           <p className="text-xs text-muted-foreground">
             {format(new Date(transaction.created_at), "dd 'de' MMM", { locale: ptBR })}
           </p>
         </div>
-        <div className="text-right mr-2">
-          <p className="font-semibold text-red-600 dark:text-red-400">
+        <div className="text-right mr-1">
+          <p className="font-semibold text-destructive">
             -{formatCurrency(Number(transaction.amount))}
           </p>
         </div>
         <button
           onClick={() => onDelete(transaction.id)}
-          className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+          className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
           aria-label="Remover saída"
         >
           <Trash2 className="w-4 h-4" />
@@ -201,41 +210,38 @@ const ExpenseCard = ({
   );
 };
 
-const RecurringExpenseCard = ({ 
-  expense, 
-  onDelete 
-}: { 
+const RecurringExpenseCard = ({
+  expense,
+  onDelete,
+}: {
   expense: RecurringExpense;
   onDelete: (id: string) => void;
-}) => {
-  return (
-    <div className="bg-card border border-border rounded-xl p-4">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-          <Repeat className="w-5 h-5 text-muted-foreground" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium truncate">{expense.name}</p>
-          <p className="text-xs text-muted-foreground">
-            Vence dia {expense.due_day}
-          </p>
-        </div>
-        <div className="text-right mr-2">
-          <p className="font-semibold text-muted-foreground">
-            {formatCurrency(Number(expense.amount))}
-          </p>
-          <p className="text-xs text-muted-foreground">mensal</p>
-        </div>
-        <button
-          onClick={() => onDelete(expense.id)}
-          className="p-2 text-muted-foreground hover:text-destructive transition-colors"
-          aria-label="Remover despesa fixa"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+}) => (
+  <div className={cn(
+    "glass rounded-xl p-4 shadow-card border border-border/50 transition-all duration-200",
+    "hover:shadow-lift hover:-translate-y-0.5 active:scale-[0.98]"
+  )}>
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+        <Repeat className="w-5 h-5 text-muted-foreground" />
       </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium truncate text-foreground">{expense.name}</p>
+        <p className="text-xs text-muted-foreground">Vence dia {expense.due_day}</p>
+      </div>
+      <div className="text-right mr-1">
+        <p className="font-semibold text-muted-foreground">{formatCurrency(Number(expense.amount))}</p>
+        <p className="text-[11px] text-muted-foreground">mensal</p>
+      </div>
+      <button
+        onClick={() => onDelete(expense.id)}
+        className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+        aria-label="Remover despesa fixa"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
     </div>
-  );
-};
+  </div>
+);
 
 export default Saidas;
