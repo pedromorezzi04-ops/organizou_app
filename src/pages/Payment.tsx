@@ -27,7 +27,7 @@ const Payment = () => {
       });
 
       if (error) {
-        toast.error('Erro ao criar checkout. Tente novamente.');
+        toast.error('Sistema de pagamento em manutenção. Tente novamente em instantes.');
         console.error('Checkout error:', error);
         return;
       }
@@ -39,15 +39,20 @@ const Payment = () => {
         return;
       }
 
+      // Store billing ID for verification on return
+      if (data?.billingId) {
+        localStorage.setItem('pending_billing_id', data.billingId);
+      }
+
       if (data?.billing?.data?.url) {
         window.location.href = data.billing.data.url;
       } else {
-        toast.error('Erro ao gerar link de pagamento.');
+        toast.error('Sistema de pagamento em manutenção. Tente novamente em instantes.');
         console.error('No URL in response:', data);
       }
     } catch (err) {
       console.error('Checkout error:', err);
-      toast.error('Erro inesperado. Tente novamente.');
+      toast.error('Sistema de pagamento em manutenção. Tente novamente em instantes.');
     } finally {
       setLoadingCheckout(false);
     }
@@ -148,7 +153,7 @@ const Payment = () => {
             ) : (
               <>
                 <CreditCard className="w-5 h-5 mr-2" />
-                Pagar com PIX
+                Ativar Plano Mensal
               </>
             )}
           </Button>
@@ -156,7 +161,7 @@ const Payment = () => {
           {/* Security badge */}
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <Shield className="w-3.5 h-3.5" />
-            Pagamento seguro via AbacatePay
+            Pagamento seguro
           </div>
         </div>
 
