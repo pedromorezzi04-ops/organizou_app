@@ -1,11 +1,16 @@
-import { TrendingUp, TrendingDown, Clock, Calendar } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { TrendingUp, TrendingDown, Clock, Calendar, Loader2, CheckCircle2 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import SummaryCard from '@/components/SummaryCard';
 import { useDashboardSummary, useMonthlyTransactions } from '@/hooks/useFinancialData';
+import { useSubscription } from '@/hooks/useSubscription';
+import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { startOfMonth, endOfMonth, eachWeekOfInterval, parseISO, isWithinInterval } from 'date-fns';
+import { toast } from 'sonner';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -30,9 +35,115 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
+const PaymentChecker = () => {
+  const [checking, setChecking] = useState(true);
+  const [confirmed, setConfirmed] = useState(false);
+  const { refresh } = useSubscription();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const checkPayment = useCallback(async () => {
+    const billingId = localStorage.getItem('pending_billing_id');
+    if (!billingId) {
+      // No billing ID, just clear params
+      setSearchParams({}, { replace: true });
+      setChecking(false);
+      return;
+    }
+
+    let attempts = 0;
+    const maxAttempts = 10;
+    const interval = 3000;
+
+    const poll = async () => {
+      attempts++;
+      try {
+        const { data, error } = await supabase.functions.invoke('check-payment', {
+          body: { billingId },
+        });
+
+        if (error) {
+          console.error('Payment check error:', error);
+          if (attempts >= maxAttempts) {
+            setChecking(false);
+            toast.error('Não foi possível confirmar o pagamento. Se já pagou, aguarde alguns minutos.');
+            localStorage.removeItem('pending_billing_id');
+            setSearchParams({}, { replace: true });
+          } else {
+            setTimeout(poll, interval);
+          }
+          return;
+        }
+
+        if (data?.isPaid) {
+          setConfirmed(true);
+          setChecking(false);
+          localStorage.removeItem('pending_billing_id');
+          toast.success('Pagamento confirmado! Acesso liberado.');
+          await refresh();
+          setTimeout(() => {
+            setSearchParams({}, { replace: true });
+          }, 2000);
+          return;
+        }
+
+        if (attempts >= maxAttempts) {
+          setChecking(false);
+          toast.info('Pagamento ainda pendente. Se já pagou, aguarde alguns minutos.');
+          localStorage.removeItem('pending_billing_id');
+          setSearchParams({}, { replace: true });
+        } else {
+          setTimeout(poll, interval);
+        }
+      } catch {
+        if (attempts >= maxAttempts) {
+          setChecking(false);
+          localStorage.removeItem('pending_billing_id');
+          setSearchParams({}, { replace: true });
+        } else {
+          setTimeout(poll, interval);
+        }
+      }
+    };
+
+    poll();
+  }, [refresh, setSearchParams]);
+
+  useEffect(() => {
+    checkPayment();
+  }, [checkPayment]);
+
+  if (confirmed) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-center justify-center">
+        <div className="text-center space-y-4 animate-in fade-in zoom-in">
+          <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto" />
+          <h2 className="text-xl font-bold text-foreground">Pagamento Confirmado!</h2>
+          <p className="text-muted-foreground">Seu acesso foi liberado.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (checking) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
+          <h2 className="text-xl font-bold text-foreground">Confirmando seu pagamento...</h2>
+          <p className="text-sm text-muted-foreground">Isso pode levar alguns segundos.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+};
+
 const Dashboard = () => {
   const { summary, isLoading } = useDashboardSummary();
   const { data: transactions } = useMonthlyTransactions();
+  const [searchParams] = useSearchParams();
+  const isCheckingPayment = searchParams.get('status') === 'checking';
 
   const now = new Date();
   const monthStart = startOfMonth(now);
@@ -59,6 +170,7 @@ const Dashboard = () => {
 
   return (
     <Layout>
+      {isCheckingPayment && <PaymentChecker />}
       <div className="space-y-5">
         {/* Hero card: Sobrou no mês */}
         <div className={cn(
@@ -66,7 +178,6 @@ const Dashboard = () => {
           "bg-gradient-to-br from-primary via-primary/90 to-emerald",
           "shadow-lift animate-fade-in"
         )}>
-          {/* Subtle decorative circle */}
           <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-primary-foreground/5" />
           <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full bg-primary-foreground/5" />
 

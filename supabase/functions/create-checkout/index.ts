@@ -53,15 +53,15 @@ Deno.serve(async (req) => {
       isCouponValid = data === true;
     }
 
-    // Get API key and endpoint from system_settings
+    // Get API key and base URL from system_settings
     const { data: apiKey } = await serviceClient.rpc("get_system_setting", {
       _key: "abacatepay_api_key",
     });
-    const { data: endpoint } = await serviceClient.rpc("get_system_setting", {
+    const { data: baseUrl } = await serviceClient.rpc("get_system_setting", {
       _key: "abacatepay_endpoint",
     });
 
-    if (!apiKey || !endpoint) {
+    if (!apiKey || !baseUrl) {
       return new Response(
         JSON.stringify({ error: "Payment system not configured" }),
         {
@@ -93,8 +93,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create billing on AbacatePay
-    const billingResponse = await fetch(endpoint, {
+    const origin = req.headers.get("origin") || "https://easy-funds.lovable.app";
+
+    // Create billing on AbacatePay using the correct payload format
+    const billingEndpoint = `${baseUrl.replace(/\/+$/, "")}/billing/create`;
+    const billingResponse = await fetch(billingEndpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -106,15 +109,14 @@ Deno.serve(async (req) => {
         products: [
           {
             externalId: `sub-${userId}`,
-            name: "Organizou+ Mensal",
-            description: "Assinatura mensal do Organizou+",
+            name: "Plano Mensal Organizou+",
             quantity: 1,
             price: amount,
           },
         ],
         metadata: { userId, email: userEmail },
-        returnUrl: `${req.headers.get("origin") || "https://easy-funds.lovable.app"}/`,
-        completionUrl: `${req.headers.get("origin") || "https://easy-funds.lovable.app"}/`,
+        returnUrl: `${origin}/?status=checking`,
+        completionUrl: `${origin}/?status=checking`,
         customer: {
           email: userEmail,
         },
@@ -134,7 +136,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    return new Response(JSON.stringify({ success: true, billing: billingData }), {
+    // Extract billing ID for client-side tracking
+    const billingId = billingData?.data?.id || billingData?.id || null;
+
+    return new Response(JSON.stringify({ success: true, billing: billingData, billingId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

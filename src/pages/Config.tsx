@@ -190,12 +190,17 @@ const Config = () => {
             </Button>
           ) : (
             <div className="space-y-2">
-              <Button variant="outline" disabled className="w-full gap-2 opacity-50">
-                <Lock className="w-4 h-4" />
-                Exportar todos os dados
-              </Button>
+              <div className="relative group">
+                <Button variant="outline" disabled className="w-full gap-2 opacity-50">
+                  <Lock className="w-4 h-4" />
+                  Exportar todos os dados
+                </Button>
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground border rounded-lg px-3 py-1.5 text-xs shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                  Disponível apenas na versão Pro
+                </div>
+              </div>
               <p className="text-xs text-muted-foreground text-center">
-                Disponível apenas para assinantes
+                {subState === 'trial' ? `${trialDaysLeft} dia(s) restante(s) no trial` : 'Assine para desbloquear'}
               </p>
             </div>
           )}
