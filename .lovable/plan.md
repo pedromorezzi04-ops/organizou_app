@@ -1,64 +1,91 @@
 
 
-# Remover Trial e Marcar Usuários Existentes como "Antigo"
+# Refatoracao de Seguranca e Inteligencia do Fluxo de Pagamento
 
 ## Resumo
 
-Duas mudancas principais:
-1. **Novos usuarios** serao redirecionados para `/payment` imediatamente apos o cadastro (sem trial)
-2. **Usuarios existentes** receberao o status `is_legacy = true` com acesso vitalicio, exibidos como "Antigo" na aba Assinaturas
+Tres frentes de trabalho: (1) blindar o webhook contra chamadas nao autorizadas e reprocessamento duplicado, (2) exibir aviso de vencimento proximo no Dashboard, (3) manter a logica de bloqueio da ProtectedRoute intacta.
 
-## Alteracoes
+---
 
-### 1. Migracao no Banco de Dados
-Marcar todos os perfis existentes como legacy:
-```sql
-UPDATE profiles SET is_legacy = true WHERE is_legacy = false;
-```
+## 1. Edge Function `cakto-webhook` — Seguranca e Idempotencia
 
-### 2. Alterar default do `subscription_status` na tabela `profiles`
-Novos perfis devem iniciar sem trial. Mudar o default de `'trial'` para `'pending'`:
-```sql
-ALTER TABLE profiles ALTER COLUMN subscription_status SET DEFAULT 'pending';
-ALTER TABLE profiles ALTER COLUMN trial_started_at SET DEFAULT NULL;
-```
+### 1a. Validacao de Token
 
-### 3. `src/hooks/useBlockedCheck.ts`
-- Remover toda logica de trial (bloco que verifica `trial_started_at` e calcula 3 dias)
-- Se `subscription_status` nao for `active` e nao for legacy e nao for admin → `needsPayment = true`
-
-### 4. `src/hooks/useSubscription.ts`
-- Remover logica de trial e `trialDaysLeft`
-- Estado `trial` deixa de existir; novos usuarios sem pagamento vao direto para `expired`
-- Simplificar: sem assinatura ativa/legacy/admin = `needsPayment`
-
-### 5. `src/pages/Payment.tsx`
-- Remover referencia a trial na mensagem
-- Ajustar texto para indicar que o pagamento e necessario para acessar o sistema
-
-### 6. `src/components/admin/SubscriptionsTab.tsx`
-- Renomear badge "Legacy" para "Antigo" (cor roxa mantida)
-- Remover filtro/contagem de "Trial" (ou manter para retrocompatibilidade mas nao devera ter novos)
-- Atualizar `getSubscriptionBadge` para exibir "Antigo" ao inves de "Legacy"
-
-### 7. `src/contexts/AuthContext.tsx`
-- No `createProfileIfNotExists`, o insert ja usara o novo default (`pending` ao inves de `trial`)
-- Nenhuma mudanca de codigo necessaria aqui, o default vem do banco
-
-## Fluxo Resultante
+Adicionar no inicio da funcao, apos o parse do body, uma verificacao do header `x-cakto-token`. O token esperado sera lido de `system_settings` (chave `cakto_webhook_token`) via `serviceClient`. Se o header nao existir ou nao corresponder, retornar 401 Unauthorized.
 
 ```text
-Novo usuario → Cadastro → Profile criado (status=pending) → Redirecionado para /payment → Paga → Ativo
-Usuario existente → is_legacy=true → Acesso vitalicio → Badge "Antigo" no admin
+Request → Verifica x-cakto-token → Token invalido? → 401
+                                  → Token valido? → Continua
 ```
+
+**Detalhe tecnico:** O admin devera cadastrar o token na tabela `system_settings` com `key_name = 'cakto_webhook_token'`. Na Cakto, configurar o mesmo token no campo de header customizado do webhook.
+
+### 1b. Checagem de Duplicidade (Idempotencia)
+
+Antes de atualizar o perfil, extrair um ID unico da transacao do payload (campos como `body.id`, `body.transaction_id`, `body.data?.id`). Consultar `webhook_logs` buscando por esse ID no campo `payload->>'transaction_id'` com `status = 'success'`. Se ja existir, retornar 200 com `{ already_processed: true }` sem processar novamente.
+
+Apos o UPDATE bem-sucedido no perfil, gravar o log com `status = 'success'` incluindo o `transaction_id` no payload para referencia futura.
+
+### 1c. Tratamento de Erros (ja existente, ajustar)
+
+O try/catch atual ja grava erros. Ajustar para incluir o `transaction_id` quando disponivel e padronizar o status como `'error'`.
+
+### Arquivo modificado
+- `supabase/functions/cakto-webhook/index.ts`
+
+### Necessidade: Secret para o token
+- O admin precisa inserir o valor do token na tabela `system_settings` com key `cakto_webhook_token`. Isso pode ser feito pelo painel admin existente ou via uma migracao com valor placeholder.
+
+---
+
+## 2. Banner de Vencimento no Dashboard
+
+### Logica
+
+No componente `Dashboard`, usar o hook `useSubscription` que ja retorna o estado da assinatura. Adicionar uma consulta a `subscription_expires_at` do perfil do usuario. Se o estado for `active` e a expiracao for em menos de 5 dias, exibir um banner de aviso.
+
+### Implementacao
+
+Criar um componente `ExpirationBanner` dentro de `Dashboard.tsx`:
+- Buscar `subscription_expires_at` via `get_subscription_info` RPC (ja disponivel)
+- Calcular dias restantes: `Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24))`
+- Se <= 5 dias e > 0: exibir banner amarelo com icone de alerta
+- Texto: "Sua assinatura vence em X dia(s). Renove agora para evitar o bloqueio de dados."
+- Botao "Renovar" com `Link` para `/payment`
+- Usuarios legacy/admin nao veem o banner
+
+### Arquivo modificado
+- `src/pages/Dashboard.tsx`
+
+---
+
+## 3. Garantia de Persistencia
+
+A logica da `ProtectedRoute` em `App.tsx` e `useBlockedCheck.ts` permanece **inalterada**. O redirecionamento para `/payment` continua sendo acionado apenas quando `needsPayment = true` (assinatura expirada ou pendente). O banner do item 2 e apenas informativo e nao bloqueia acesso.
+
+A Edge Function continua usando `SUPABASE_SERVICE_ROLE_KEY` (Service Role) para bypass de RLS ao atualizar o perfil.
+
+---
 
 ## Arquivos Modificados
 
 | Arquivo | Mudanca |
 |---------|---------|
-| Migracao SQL | `UPDATE profiles SET is_legacy=true`, alterar defaults |
-| `useBlockedCheck.ts` | Remover logica trial, pending = needsPayment |
-| `useSubscription.ts` | Remover trial, simplificar estados |
-| `Payment.tsx` | Ajustar textos (remover mencao a trial) |
-| `SubscriptionsTab.tsx` | Badge "Legacy" → "Antigo" |
+| `supabase/functions/cakto-webhook/index.ts` | Token validation, idempotencia, log com transaction_id |
+| `src/pages/Dashboard.tsx` | Componente ExpirationBanner com aviso de 5 dias |
+
+## Fluxo Resultante do Webhook
+
+```text
+POST /cakto-webhook
+  → Verifica x-cakto-token (401 se invalido)
+  → Parse body, extrai external_id e transaction_id
+  → Log inicial na webhook_logs
+  → Verifica duplicidade por transaction_id (200 se ja processado)
+  → Verifica se status = paid
+  → UPDATE profiles (subscription_status=active, expires_at=+1 mes)
+  → Log final com status=success
+  → 200 OK
+```
 
