@@ -1,0 +1,1 @@
+UPDATE public.profiles SET is_legacy = true WHERE user_id = '88421198-0a51-4e3c-8a2b-ccd1c9c61fae';
