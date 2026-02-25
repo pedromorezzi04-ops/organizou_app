@@ -27,7 +27,7 @@ const Config = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdminCheck();
-  const { canExport, state: subState, trialDaysLeft } = useSubscription();
+  const { canExport, state: subState } = useSubscription();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [businessName, setBusinessName] = useState('');
@@ -200,7 +200,7 @@ const Config = () => {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground text-center">
-                {subState === 'trial' ? `${trialDaysLeft} dia(s) restante(s) no trial` : 'Assine para desbloquear'}
+                Assine para desbloquear
               </p>
             </div>
           )}
