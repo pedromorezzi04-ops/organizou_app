@@ -18,11 +18,14 @@ Deno.serve(async (req) => {
     });
   }
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+
   try {
     const body = await req.json();
     console.log("Cakto webhook received:", JSON.stringify(body));
 
-    // Extract external_id (user ID) - check common Cakto payload structures
     const externalId =
       body.external_id ||
       body.externalId ||
@@ -32,15 +35,6 @@ Deno.serve(async (req) => {
       body.data?.external_id ||
       body.data?.metadata?.external_id;
 
-    if (!externalId) {
-      console.error("No external_id found in payload:", JSON.stringify(body));
-      return new Response(
-        JSON.stringify({ error: "Missing external_id" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Check payment status - accept common paid/approved statuses
     const status =
       body.status ||
       body.payment_status ||
@@ -57,6 +51,22 @@ Deno.serve(async (req) => {
       statusLower.includes("confirmed") ||
       statusLower.includes("active");
 
+    // Log every request
+    await serviceClient.from("webhook_logs").insert({
+      payload: body,
+      status: isPaid ? "paid" : "ignored",
+      event_type: statusLower || "unknown",
+      user_id: externalId || null,
+    });
+
+    if (!externalId) {
+      console.error("No external_id found in payload:", JSON.stringify(body));
+      return new Response(
+        JSON.stringify({ error: "Missing external_id" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (!isPaid) {
       console.log(`Status "${status}" is not a paid status, ignoring.`);
       return new Response(
@@ -66,10 +76,6 @@ Deno.serve(async (req) => {
     }
 
     // Activate subscription
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
-
     const now = new Date();
     const expiresAt = new Date(now);
     expiresAt.setMonth(expiresAt.getMonth() + 1);
@@ -85,6 +91,13 @@ Deno.serve(async (req) => {
 
     if (updateError) {
       console.error("Error updating profile:", updateError);
+      // Log error
+      await serviceClient.from("webhook_logs").insert({
+        payload: body,
+        status: "error",
+        event_type: statusLower || "unknown",
+        user_id: externalId,
+      });
       return new Response(
         JSON.stringify({ error: "Failed to update subscription" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -99,6 +112,14 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("Webhook error:", err);
+    // Log parse/unexpected errors
+    try {
+      await serviceClient.from("webhook_logs").insert({
+        payload: { raw_error: String(err) },
+        status: "error",
+        event_type: "parse_error",
+      });
+    } catch (_) { /* ignore logging failure */ }
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
