@@ -5,6 +5,7 @@ import Layout from '@/components/Layout';
 import SummaryCard from '@/components/SummaryCard';
 import { useDashboardSummary, useMonthlyTransactions } from '@/hooks/useFinancialData';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -39,78 +40,67 @@ const PaymentChecker = () => {
   const [checking, setChecking] = useState(true);
   const [confirmed, setConfirmed] = useState(false);
   const { refresh } = useSubscription();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const checkPayment = useCallback(async () => {
-    const billingId = localStorage.getItem('pending_billing_id');
-    if (!billingId) {
-      // No billing ID, just clear params
-      setSearchParams({}, { replace: true });
-      setChecking(false);
-      return;
-    }
-
-    let attempts = 0;
-    const maxAttempts = 10;
-    const interval = 3000;
-
-    const poll = async () => {
-      attempts++;
-      try {
-        const { data, error } = await supabase.functions.invoke('check-payment', {
-          body: { billingId },
-        });
-
-        if (error) {
-          console.error('Payment check error:', error);
-          if (attempts >= maxAttempts) {
-            setChecking(false);
-            toast.error('Não foi possível confirmar o pagamento. Se já pagou, aguarde alguns minutos.');
-            localStorage.removeItem('pending_billing_id');
-            setSearchParams({}, { replace: true });
-          } else {
-            setTimeout(poll, interval);
-          }
-          return;
-        }
-
-        if (data?.isPaid) {
-          setConfirmed(true);
-          setChecking(false);
-          localStorage.removeItem('pending_billing_id');
-          toast.success('Pagamento confirmado! Acesso liberado.');
-          await refresh();
-          setTimeout(() => {
-            setSearchParams({}, { replace: true });
-          }, 2000);
-          return;
-        }
-
-        if (attempts >= maxAttempts) {
-          setChecking(false);
-          toast.info('Pagamento ainda pendente. Se já pagou, aguarde alguns minutos.');
-          localStorage.removeItem('pending_billing_id');
-          setSearchParams({}, { replace: true });
-        } else {
-          setTimeout(poll, interval);
-        }
-      } catch {
-        if (attempts >= maxAttempts) {
-          setChecking(false);
-          localStorage.removeItem('pending_billing_id');
-          setSearchParams({}, { replace: true });
-        } else {
-          setTimeout(poll, interval);
-        }
-      }
-    };
-
-    poll();
-  }, [refresh, setSearchParams]);
-
   useEffect(() => {
-    checkPayment();
-  }, [checkPayment]);
+    if (!user) return;
+
+    // Subscribe to realtime changes on the user's profile
+    const channel = supabase
+      .channel('payment-check')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newRecord = payload.new as any;
+          if (newRecord.subscription_status === 'active') {
+            setConfirmed(true);
+            setChecking(false);
+            localStorage.removeItem('cakto_pending');
+            toast.success('Pagamento confirmado! Acesso liberado.');
+            refresh();
+            setTimeout(() => {
+              setSearchParams({}, { replace: true });
+            }, 2000);
+          }
+        }
+      )
+      .subscribe();
+
+    // Also poll every 10s as fallback
+    const pollInterval = setInterval(async () => {
+      const { data } = await supabase.rpc('get_subscription_info', { _user_id: user.id });
+      if (data?.[0]?.subscription_status === 'active') {
+        setConfirmed(true);
+        setChecking(false);
+        localStorage.removeItem('cakto_pending');
+        toast.success('Pagamento confirmado! Acesso liberado.');
+        refresh();
+        clearInterval(pollInterval);
+        setTimeout(() => setSearchParams({}, { replace: true }), 2000);
+      }
+    }, 10000);
+
+    // Timeout after 120s
+    const timeout = setTimeout(() => {
+      setChecking(false);
+      localStorage.removeItem('cakto_pending');
+      toast.info('Se já pagou, aguarde alguns minutos. Seu acesso será liberado automaticamente.');
+      setSearchParams({}, { replace: true });
+    }, 120000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(pollInterval);
+      clearTimeout(timeout);
+    };
+  }, [user, refresh, setSearchParams]);
 
   if (confirmed) {
     return (
@@ -129,8 +119,8 @@ const PaymentChecker = () => {
       <div className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-          <h2 className="text-xl font-bold text-foreground">Confirmando seu pagamento...</h2>
-          <p className="text-sm text-muted-foreground">Isso pode levar alguns segundos.</p>
+          <h2 className="text-xl font-bold text-foreground">Processando seu pagamento...</h2>
+          <p className="text-sm text-muted-foreground">Seu acesso será liberado em instantes.</p>
         </div>
       </div>
     );
@@ -143,7 +133,7 @@ const Dashboard = () => {
   const { summary, isLoading } = useDashboardSummary();
   const { data: transactions } = useMonthlyTransactions();
   const [searchParams] = useSearchParams();
-  const isCheckingPayment = searchParams.get('status') === 'checking';
+  const isCheckingPayment = searchParams.get('status') === 'checking' || localStorage.getItem('cakto_pending') === 'true';
 
   const now = new Date();
   const monthStart = startOfMonth(now);
@@ -227,18 +217,8 @@ const Dashboard = () => {
                     tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                   />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--accent))', radius: 4 }} />
-                  <Bar
-                    dataKey="income"
-                    fill="hsl(var(--emerald))"
-                    radius={[4, 4, 0, 0]}
-                    opacity={0.85}
-                  />
-                  <Bar
-                    dataKey="expense"
-                    fill="hsl(var(--destructive))"
-                    radius={[4, 4, 0, 0]}
-                    opacity={0.65}
-                  />
+                  <Bar dataKey="income" fill="hsl(var(--emerald))" radius={[4, 4, 0, 0]} opacity={0.85} />
+                  <Bar dataKey="expense" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} opacity={0.65} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

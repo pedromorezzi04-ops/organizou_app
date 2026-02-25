@@ -3,11 +3,5 @@ project_id = "lvbxrfxfhrgsleuuemcb"
 [functions.agent-api]
 verify_jwt = false
 
-[functions.create-checkout]
-verify_jwt = false
-
-[functions.payment-webhook]
-verify_jwt = false
-
-[functions.check-payment]
+[functions.cakto-webhook]
 verify_jwt = false
