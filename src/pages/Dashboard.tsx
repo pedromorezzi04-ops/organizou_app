@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { startOfMonth, endOfMonth, eachWeekOfInterval, parseISO, isWithinInterval } from 'date-fns';
 import { toast } from 'sonner';
+import ExpirationBanner from '@/components/ExpirationBanner';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -162,6 +163,7 @@ const Dashboard = () => {
     <Layout>
       {isCheckingPayment && <PaymentChecker />}
       <div className="space-y-5">
+        <ExpirationBanner />
         {/* Hero card: Sobrou no mês */}
         <div className={cn(
           "rounded-2xl p-6 text-primary-foreground relative overflow-hidden",

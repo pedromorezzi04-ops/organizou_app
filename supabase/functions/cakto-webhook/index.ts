@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-cakto-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -22,10 +22,34 @@ Deno.serve(async (req) => {
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
+  let transactionId: string | null = null;
+
   try {
     const body = await req.json();
     console.log("Cakto webhook received:", JSON.stringify(body));
 
+    // --- 1a. Token Validation ---
+    const incomingToken = req.headers.get("x-cakto-token");
+    const { data: expectedToken } = await serviceClient.rpc("get_system_setting", {
+      _key: "cakto_webhook_token",
+    });
+
+    if (expectedToken && expectedToken !== "") {
+      if (!incomingToken || incomingToken !== expectedToken) {
+        console.error("Invalid or missing x-cakto-token header");
+        await serviceClient.from("webhook_logs").insert({
+          payload: { error: "invalid_token", headers_received: !!incomingToken },
+          status: "error",
+          event_type: "auth_failure",
+        });
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // --- Extract IDs ---
     const externalId =
       body.external_id ||
       body.externalId ||
@@ -34,6 +58,13 @@ Deno.serve(async (req) => {
       body.customer?.external_id ||
       body.data?.external_id ||
       body.data?.metadata?.external_id;
+
+    transactionId =
+      body.id ||
+      body.transaction_id ||
+      body.data?.id ||
+      body.data?.transaction_id ||
+      null;
 
     const status =
       body.status ||
@@ -51,10 +82,10 @@ Deno.serve(async (req) => {
       statusLower.includes("confirmed") ||
       statusLower.includes("active");
 
-    // Log IMMEDIATELY - before any processing
+    // --- Log inicial ---
     try {
       await serviceClient.from("webhook_logs").insert({
-        payload: body,
+        payload: { ...body, transaction_id: transactionId },
         status: isPaid ? "paid" : "received",
         event_type: statusLower || "unknown",
         user_id: externalId || null,
@@ -79,7 +110,25 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Activate subscription
+    // --- 1b. Idempotency Check ---
+    if (transactionId) {
+      const { data: existing } = await serviceClient
+        .from("webhook_logs")
+        .select("id")
+        .eq("status", "success")
+        .filter("payload->>transaction_id", "eq", String(transactionId))
+        .maybeSingle();
+
+      if (existing) {
+        console.log(`Transaction ${transactionId} already processed, skipping.`);
+        return new Response(
+          JSON.stringify({ already_processed: true, transactionId }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // --- Activate subscription ---
     const now = new Date();
     const expiresAt = new Date(now);
     expiresAt.setMonth(expiresAt.getMonth() + 1);
@@ -95,9 +144,8 @@ Deno.serve(async (req) => {
 
     if (updateError) {
       console.error("Error updating profile:", updateError);
-      // Log error
       await serviceClient.from("webhook_logs").insert({
-        payload: body,
+        payload: { ...body, transaction_id: transactionId, error: String(updateError) },
         status: "error",
         event_type: statusLower || "unknown",
         user_id: externalId,
@@ -108,6 +156,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    // --- Success log (for idempotency reference) ---
+    await serviceClient.from("webhook_logs").insert({
+      payload: { ...body, transaction_id: transactionId },
+      status: "success",
+      event_type: statusLower || "unknown",
+      user_id: externalId,
+    });
+
     console.log(`Subscription activated for user ${externalId}, expires at ${expiresAt.toISOString()}`);
 
     return new Response(
@@ -116,10 +172,9 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("Webhook error:", err);
-    // Log parse/unexpected errors
     try {
       await serviceClient.from("webhook_logs").insert({
-        payload: { raw_error: String(err) },
+        payload: { raw_error: String(err), transaction_id: transactionId },
         status: "error",
         event_type: "parse_error",
       });
