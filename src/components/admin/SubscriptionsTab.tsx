@@ -26,7 +26,7 @@ type FilterType = 'all' | 'active' | 'trial' | 'expired' | 'legacy';
 
 const getSubscriptionBadge = (profile: SubscriptionProfile) => {
   if (profile.is_legacy) {
-    return <Badge className="bg-purple-500 hover:bg-purple-600 text-white border-transparent">Legacy</Badge>;
+    return <Badge className="bg-purple-500 hover:bg-purple-600 text-white border-transparent">Antigo</Badge>;
   }
 
   const status = profile.subscription_status || 'trial';
@@ -38,7 +38,7 @@ const getSubscriptionBadge = (profile: SubscriptionProfile) => {
       }
       return <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-transparent">Ativo</Badge>;
     case 'trial':
-      return <Badge className="bg-blue-500 hover:bg-blue-600 text-white border-transparent">Trial</Badge>;
+      return <Badge className="bg-blue-500 hover:bg-blue-600 text-white border-transparent">Pendente</Badge>;
     case 'expired':
       return <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-transparent">Expirado</Badge>;
     default:
@@ -81,16 +81,16 @@ const SubscriptionsTab = () => {
   const filters: { key: FilterType; label: string }[] = [
     { key: 'all', label: `Todos (${profiles.length})` },
     { key: 'active', label: `Ativos (${activeCount})` },
-    { key: 'trial', label: `Trial (${trialCount})` },
+    { key: 'trial', label: `Pendente (${trialCount})` },
     { key: 'expired', label: `Expirados (${expiredCount})` },
-    { key: 'legacy', label: `Legacy (${legacyCount})` },
+    { key: 'legacy', label: `Antigo (${legacyCount})` },
   ];
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Ativos</CardTitle></CardHeader><CardContent><div className="flex items-center gap-2"><Crown className="w-5 h-5 text-emerald-500" /><span className="text-2xl font-bold text-emerald-500">{activeCount}</span></div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Trial</CardTitle></CardHeader><CardContent><div className="flex items-center gap-2"><Clock className="w-5 h-5 text-blue-500" /><span className="text-2xl font-bold text-blue-500">{trialCount}</span></div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Pendente</CardTitle></CardHeader><CardContent><div className="flex items-center gap-2"><Clock className="w-5 h-5 text-blue-500" /><span className="text-2xl font-bold text-blue-500">{trialCount}</span></div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Expirados</CardTitle></CardHeader><CardContent><div className="flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-orange-500" /><span className="text-2xl font-bold text-orange-500">{expiredCount}</span></div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Legacy</CardTitle></CardHeader><CardContent><div className="flex items-center gap-2"><Gem className="w-5 h-5 text-purple-500" /><span className="text-2xl font-bold text-purple-500">{legacyCount}</span></div></CardContent></Card>
       </div>

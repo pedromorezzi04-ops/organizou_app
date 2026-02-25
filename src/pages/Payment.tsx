@@ -17,6 +17,7 @@ const Payment = () => {
   };
 
   const isCritical = state === 'expired_critical';
+  const isPending = state === 'pending';
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">

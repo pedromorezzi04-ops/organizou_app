@@ -2,12 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-export type SubscriptionState = 'loading' | 'admin' | 'legacy' | 'trial' | 'active' | 'expired' | 'expired_critical';
+export type SubscriptionState = 'loading' | 'admin' | 'legacy' | 'active' | 'expired' | 'expired_critical' | 'pending';
 
 export const useSubscription = () => {
   const { user } = useAuth();
   const [state, setState] = useState<SubscriptionState>('loading');
-  const [trialDaysLeft, setTrialDaysLeft] = useState(0);
   const [hoursOverdue, setHoursOverdue] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -37,7 +36,7 @@ export const useSubscription = () => {
       });
 
       if (error || !data || data.length === 0) {
-        setState('trial');
+        setState('pending');
         setLoading(false);
         return;
       }
@@ -65,34 +64,11 @@ export const useSubscription = () => {
         return;
       }
 
-      // Trial logic
-      if (info.trial_started_at) {
-        const trialStart = new Date(info.trial_started_at);
-        const trialEnd = new Date(trialStart);
-        trialEnd.setDate(trialEnd.getDate() + 3);
-        const now = new Date();
-
-        if (now < trialEnd) {
-          const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          setTrialDaysLeft(daysLeft);
-          setState('trial');
-          setLoading(false);
-          return;
-        }
-
-        // Trial expired
-        const hoursOver = (now.getTime() - trialEnd.getTime()) / (1000 * 60 * 60);
-        setHoursOverdue(hoursOver);
-        setState(hoursOver > 72 ? 'expired_critical' : 'expired');
-        setLoading(false);
-        return;
-      }
-
-      setState('trial');
-      setTrialDaysLeft(3);
+      // No active subscription — needs payment
+      setState('pending');
     } catch (err) {
       console.error('Subscription check error:', err);
-      setState('trial');
+      setState('pending');
     } finally {
       setLoading(false);
     }
@@ -103,7 +79,7 @@ export const useSubscription = () => {
   }, [checkSubscription]);
 
   const canExport = state === 'admin' || state === 'legacy' || state === 'active';
-  const needsPayment = state === 'expired' || state === 'expired_critical';
+  const needsPayment = state === 'pending' || state === 'expired' || state === 'expired_critical';
 
-  return { state, trialDaysLeft, hoursOverdue, loading, canExport, needsPayment, refresh: checkSubscription };
+  return { state, hoursOverdue, loading, canExport, needsPayment, refresh: checkSubscription };
 };

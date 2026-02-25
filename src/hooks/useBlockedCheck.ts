@@ -26,7 +26,16 @@ export const useBlockedCheck = () => {
         return { blocked: true, needsPayment: false };
       }
 
-      // 2. Check admin or legacy
+      // 2. Check admin
+      const { data: isAdmin } = await supabase.rpc('has_role', {
+        _user_id: uid,
+        _role: 'admin' as const,
+      });
+      if (isAdmin) {
+        return { blocked: false, needsPayment: false };
+      }
+
+      // 3. Get subscription info
       const { data: subData } = await supabase.rpc('get_subscription_info', {
         _user_id: uid,
       });
@@ -42,27 +51,7 @@ export const useBlockedCheck = () => {
         return { blocked: false, needsPayment: false };
       }
 
-      // Admin has full access
-      const { data: isAdmin } = await supabase.rpc('has_role', {
-        _user_id: uid,
-        _role: 'admin' as const,
-      });
-      if (isAdmin) {
-        return { blocked: false, needsPayment: false };
-      }
-
-      // 3. Check trial (3 days from trial_started_at)
-      if (info.subscription_status === 'trial' && info.trial_started_at) {
-        const trialEnd = new Date(info.trial_started_at);
-        trialEnd.setDate(trialEnd.getDate() + 3);
-        if (new Date() <= trialEnd) {
-          return { blocked: false, needsPayment: false };
-        }
-        // Trial expired
-        return { blocked: false, needsPayment: true };
-      }
-
-      // 4. Check active subscription
+      // Active subscription
       if (info.subscription_status === 'active' && info.subscription_expires_at) {
         if (new Date() <= new Date(info.subscription_expires_at)) {
           return { blocked: false, needsPayment: false };
@@ -70,7 +59,7 @@ export const useBlockedCheck = () => {
         return { blocked: false, needsPayment: true };
       }
 
-      // 5. Expired or no valid subscription
+      // No active subscription — needs payment
       return { blocked: false, needsPayment: true };
     } catch (err) {
       console.error('Error checking user status:', err);
