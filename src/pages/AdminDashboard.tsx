@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Shield, Users, UserCheck, UserX, RefreshCw, Settings, Tag, Plus, Trash2, Loader2, AlertCircle, CheckCircle2, FlaskConical, Search } from 'lucide-react';
+import { Shield, Users, UserCheck, UserX, RefreshCw, Tag, Plus, Trash2, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -112,105 +111,6 @@ const UsersTab = () => {
   );
 };
 
-// ─── API Settings Tab ───
-const ApiSettingsTab = () => {
-  const [apiKey, setApiKey] = useState('');
-  const [baseUrl, setBaseUrl] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [urlError, setUrlError] = useState('');
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      const [keyRes, urlRes] = await Promise.all([
-        supabase.from('system_settings').select('key_value').eq('key_name', 'abacatepay_api_key').single(),
-        supabase.from('system_settings').select('key_value').eq('key_name', 'abacatepay_endpoint').single(),
-      ]);
-      setApiKey(keyRes.data?.key_value || '');
-      setBaseUrl(urlRes.data?.key_value || '');
-      setLoading(false);
-    };
-    load();
-  }, []);
-
-  const validateUrl = (url: string) => {
-    if (!url.trim()) { setUrlError(''); return true; }
-    try {
-      const parsed = new URL(url);
-      if (!['http:', 'https:'].includes(parsed.protocol)) { setUrlError('Use http:// ou https://'); return false; }
-      if (url.endsWith('//') || /\/{2,}/.test(url.replace('://', ''))) { setUrlError('URL contém barras duplicadas'); return false; }
-      setUrlError('');
-      return true;
-    } catch {
-      setUrlError('URL inválida');
-      return false;
-    }
-  };
-
-  const handleUrlChange = (value: string) => {
-    setBaseUrl(value);
-    validateUrl(value);
-  };
-
-  const save = async () => {
-    if (!validateUrl(baseUrl)) return;
-    setSaving(true);
-    try {
-      // Upsert api key
-      const upsertKey = supabase.from('system_settings').upsert(
-        { key_name: 'abacatepay_api_key', key_value: apiKey.trim() },
-        { onConflict: 'key_name' }
-      );
-      const upsertUrl = supabase.from('system_settings').upsert(
-        { key_name: 'abacatepay_endpoint', key_value: baseUrl.trim().replace(/\/+$/, '') },
-        { onConflict: 'key_name' }
-      );
-      await Promise.all([upsertKey, upsertUrl]);
-      toast.success('Configurações salvas!');
-    } catch { toast.error('Erro ao salvar'); }
-    finally { setSaving(false); }
-  };
-
-  if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Settings className="w-5 h-5" />Configurações de API</CardTitle>
-        <CardDescription>Configure a integração com o gateway de pagamento</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label>Chave de API (Bearer Token)</Label>
-          <Input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="apt_..." type="password" />
-          <p className="text-xs text-muted-foreground">Token de autenticação da API de pagamentos</p>
-        </div>
-        <div className="space-y-2">
-          <Label>Base URL da API</Label>
-          <Input
-            value={baseUrl}
-            onChange={(e) => handleUrlChange(e.target.value)}
-            placeholder="https://api.abacatepay.com/v1"
-            className={urlError ? 'border-destructive' : ''}
-          />
-          {urlError ? (
-            <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="w-3 h-3" />{urlError}</p>
-          ) : baseUrl.trim() && !urlError ? (
-            <p className="text-xs text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />URL válida</p>
-          ) : (
-            <p className="text-xs text-muted-foreground">Ex: https://api.abacatepay.com/v1</p>
-          )}
-        </div>
-        <Button onClick={save} disabled={saving || !!urlError} className="w-full">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-          Salvar Configurações
-        </Button>
-      </CardContent>
-    </Card>
-  );
-};
-
 // ─── Coupons Tab ───
 const CouponsTab = () => {
   const [coupons, setCoupons] = useState<{ id: string; code: string; is_active: boolean; created_at: string }[]>([]);
@@ -282,159 +182,6 @@ const CouponsTab = () => {
   );
 };
 
-// ─── Testing Tab ───
-const TestingTab = () => {
-  const [testAmount, setTestAmount] = useState('1.00');
-  const [billingIdInput, setBillingIdInput] = useState('');
-  const [loadingCreate, setLoadingCreate] = useState(false);
-  const [loadingCheck, setLoadingCheck] = useState(false);
-  const [responseLog, setResponseLog] = useState<string | null>(null);
-  const [responseSuccess, setResponseSuccess] = useState<boolean | null>(null);
-
-  const handleCreateBilling = async () => {
-    setLoadingCreate(true);
-    setResponseLog(null);
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-test-checkout', {
-        body: { action: 'create_billing', amount: parseFloat(testAmount) || 1 },
-      });
-
-      if (error) {
-        setResponseSuccess(false);
-        setResponseLog(JSON.stringify({ error: error.message }, null, 2));
-        toast.error('Erro na requisição');
-        return;
-      }
-
-      setResponseSuccess(data?.success ?? false);
-      setResponseLog(JSON.stringify(data, null, 2));
-
-      if (data?.success) {
-        toast.success('Cobrança de teste criada com sucesso!');
-        const billingId = data?.response?.data?.id || data?.response?.id;
-        if (billingId) setBillingIdInput(billingId);
-      } else {
-        toast.error('Falha ao criar cobrança');
-      }
-    } catch (err) {
-      setResponseSuccess(false);
-      setResponseLog(JSON.stringify({ error: String(err) }, null, 2));
-      toast.error('Erro inesperado');
-    } finally {
-      setLoadingCreate(false);
-    }
-  };
-
-  const handleCheckBilling = async () => {
-    if (!billingIdInput.trim()) {
-      toast.error('Insira o ID da cobrança');
-      return;
-    }
-    setLoadingCheck(true);
-    setResponseLog(null);
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-test-checkout', {
-        body: { action: 'check_billing', billingId: billingIdInput.trim() },
-      });
-
-      if (error) {
-        setResponseSuccess(false);
-        setResponseLog(JSON.stringify({ error: error.message }, null, 2));
-        toast.error('Erro na requisição');
-        return;
-      }
-
-      setResponseSuccess(data?.success ?? false);
-      setResponseLog(JSON.stringify(data, null, 2));
-
-      if (data?.success) {
-        toast.success('Consulta realizada com sucesso!');
-      } else {
-        toast.error('Falha ao consultar status');
-      }
-    } catch (err) {
-      setResponseSuccess(false);
-      setResponseLog(JSON.stringify({ error: String(err) }, null, 2));
-      toast.error('Erro inesperado');
-    } finally {
-      setLoadingCheck(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Create Billing Test */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><FlaskConical className="w-5 h-5" />Gerar Cobrança de Teste</CardTitle>
-          <CardDescription>Testa a criação de billing usando as credenciais salvas</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Valor (R$)</Label>
-            <Input
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={testAmount}
-              onChange={(e) => setTestAmount(e.target.value)}
-              placeholder="1.00"
-              className="font-mono"
-            />
-          </div>
-          <Button onClick={handleCreateBilling} disabled={loadingCreate} className="w-full">
-            {loadingCreate ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FlaskConical className="w-4 h-4 mr-2" />}
-            Gerar Cobrança de Teste
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Check Billing Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Search className="w-5 h-5" />Verificar Status de Cobrança</CardTitle>
-          <CardDescription>Consulta o status de uma cobrança pelo ID</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>ID da Cobrança</Label>
-            <Input
-              value={billingIdInput}
-              onChange={(e) => setBillingIdInput(e.target.value)}
-              placeholder="bill_..."
-              className="font-mono text-sm"
-            />
-          </div>
-          <Button onClick={handleCheckBilling} disabled={loadingCheck || !billingIdInput.trim()} variant="outline" className="w-full">
-            {loadingCheck ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Search className="w-4 h-4 mr-2" />}
-            Consultar Status
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Response Log */}
-      {responseLog && (
-        <Card className={responseSuccess ? 'border-emerald-500/30' : 'border-destructive/30'}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              {responseSuccess ? (
-                <><CheckCircle2 className="w-4 h-4 text-emerald-500" />Resposta (Sucesso)</>
-              ) : (
-                <><AlertCircle className="w-4 h-4 text-destructive" />Resposta (Erro)</>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <pre className="bg-muted rounded-lg p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap max-h-80 overflow-y-auto">
-              {responseLog}
-            </pre>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-};
-
 // ─── Main Admin Dashboard ───
 const AdminDashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -465,16 +212,12 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="users">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="users" className="gap-1.5"><Users className="w-4 h-4" />Usuários</TabsTrigger>
-            <TabsTrigger value="api" className="gap-1.5"><Settings className="w-4 h-4" />API</TabsTrigger>
             <TabsTrigger value="coupons" className="gap-1.5"><Tag className="w-4 h-4" />Cupons</TabsTrigger>
-            <TabsTrigger value="testing" className="gap-1.5"><FlaskConical className="w-4 h-4" />Testes</TabsTrigger>
           </TabsList>
           <TabsContent value="users"><UsersTab /></TabsContent>
-          <TabsContent value="api"><ApiSettingsTab /></TabsContent>
           <TabsContent value="coupons"><CouponsTab /></TabsContent>
-          <TabsContent value="testing"><TestingTab /></TabsContent>
         </Tabs>
       </div>
     </div>
