@@ -1,110 +1,97 @@
 
 
-# Migracao de AbacatePay para Cakto Checkout
+# Implementacao: Webhook Logs + Painel Admin de Pagamentos
 
-## Resumo
+## Situacao Atual
 
-Substituir toda a integracao com AbacatePay por um fluxo simples de redirecionamento para checkout externo Cakto, com webhook para ativacao automatica de assinatura.
+- `cakto-webhook` ja existe e funciona (recebe POST, atualiza profiles)
+- `Payment.tsx` ja redireciona para Cakto com `external_id`
+- `Dashboard.tsx` ja tem `PaymentChecker` com Realtime + polling
+- `AdminDashboard.tsx` tem 2 abas: Usuarios e Cupons
+
+Tudo no frontend e webhook ja esta funcional. Falta apenas a tabela de logs e o painel de diagnostico admin.
 
 ---
 
 ## Alteracoes
 
-### 1. Pagina `/payment` - Redirecionar para Cakto
+### 1. Migracao SQL: Criar tabela `webhook_logs`
 
-**Arquivo:** `src/pages/Payment.tsx`
+```sql
+CREATE TABLE public.webhook_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  payload jsonb NOT NULL DEFAULT '{}',
+  status text NOT NULL DEFAULT 'received',
+  event_type text,
+  user_id uuid
+);
 
-- Remover chamada a `supabase.functions.invoke('create-checkout')`
-- O botao "Ativar Plano Mensal" abre `https://pay.cakto.com.br/98ajdxe_784173?external_id={user.id}` em nova aba ou redireciona
-- Manter cupom? Nao — o fluxo Cakto e externo, remover campo de cupom
-- Manter layout visual existente, apenas trocar a acao do botao
+ALTER TABLE public.webhook_logs ENABLE ROW LEVEL SECURITY;
 
-### 2. Nova Edge Function `cakto-webhook`
+CREATE POLICY "Only admins can view webhook_logs"
+  ON public.webhook_logs FOR SELECT
+  USING (public.has_role(auth.uid(), 'admin'));
+
+CREATE POLICY "Only admins can delete webhook_logs"
+  ON public.webhook_logs FOR DELETE
+  USING (public.has_role(auth.uid(), 'admin'));
+```
+
+Sem politica de INSERT para usuarios normais — apenas o Service Role (webhook) insere.
+
+### 2. Atualizar Edge Function `cakto-webhook`
 
 **Arquivo:** `supabase/functions/cakto-webhook/index.ts`
 
-- `verify_jwt = false` no config.toml (webhook publico)
-- Recebe POST da Cakto
-- Extrai `external_id` (user ID) do payload
-- Verifica status pago/aprovado no JSON
-- Usa Service Role client para atualizar `profiles`:
-  - `subscription_status = 'active'`
-  - `subscription_expires_at = now + 1 mes`
-  - `status = 'active'`
-- Retorna 200 OK
+Adicionar log em `webhook_logs` para cada requisicao recebida (antes de processar):
 
-### 3. Dashboard - Verificacao de status ao retornar
+```typescript
+await serviceClient.from("webhook_logs").insert({
+  payload: body,
+  status: isPaid ? "paid" : "ignored",
+  event_type: statusLower || "unknown",
+  user_id: externalId || null,
+});
+```
 
-**Arquivo:** `src/pages/Dashboard.tsx`
+Registrar tambem em caso de erro (status "error").
 
-- Substituir `PaymentChecker` (que usa `check-payment` + AbacatePay polling) por um listener Realtime no canal `profiles`
-- Quando `searchParams` contem `status=checking`, mostrar overlay "Processando seu pagamento..."
-- Ouvir `postgres_changes` na tabela `profiles` filtrado por `user_id`
-- Quando `subscription_status` mudar para `active`, mostrar confirmacao e limpar overlay
-- Fallback: timeout de 60s com mensagem "Se ja pagou, aguarde alguns minutos"
-
-### 4. Limpeza - Remover funcoes AbacatePay
-
-**Arquivos a deletar:**
-- `supabase/functions/create-checkout/index.ts`
-- `supabase/functions/admin-test-checkout/index.ts`
-- `supabase/functions/check-payment/index.ts`
-- `supabase/functions/payment-webhook/index.ts`
-
-**Arquivo:** `supabase/config.toml`
-- Remover entradas `[functions.create-checkout]`, `[functions.admin-test-checkout]`, `[functions.check-payment]`, `[functions.payment-webhook]`
-- Adicionar `[functions.cakto-webhook]` com `verify_jwt = false`
-
-### 5. Admin Dashboard - Remover abas AbacatePay
+### 3. Nova aba Admin: "Pagamentos"
 
 **Arquivo:** `src/pages/AdminDashboard.tsx`
 
-- Remover `ApiSettingsTab` (configuracoes AbacatePay)
-- Remover `TestingTab` (sandbox de teste AbacatePay)
-- Manter `UsersTab` e `CouponsTab`
-- Atualizar TabsList de 4 para 2 colunas (`grid-cols-2`)
-- Remover imports nao utilizados (Settings, FlaskConical, Search, AlertCircle, CheckCircle2, etc)
+Criar componente `PaymentsTab` com:
 
-### 6. Payment page - Retorno da Cakto
+- **Tabela de Logs:** Lista os ultimos registros de `webhook_logs` com colunas: Data, Tipo, Status, User ID, e um botao para expandir/ver o payload JSON completo
+- **Botao Atualizar:** Recarrega os logs manualmente
+- **Simulador:** Botao "Simular Pagamento" que chama `supabase.functions.invoke('cakto-webhook')` com payload simulado contendo um `user_id` selecionado da lista de usuarios, para testar a ativacao
+- **Link de Teste Real:** Botao que gera e abre `https://pay.cakto.com.br/98ajdxe_784173?external_id={admin_user_id}` para o admin testar o fluxo real
 
-**Arquivo:** `src/pages/Payment.tsx`
+Atualizar TabsList para `grid-cols-3` (Usuarios, Cupons, Pagamentos).
 
-- Ao clicar no botao, definir `localStorage.setItem('cakto_pending', 'true')` antes de redirecionar
-- A URL de retorno da Cakto sera `https://easy-funds.lovable.app/?status=checking`
+### 4. Sem alteracoes em Payment.tsx e Dashboard.tsx
 
-**Arquivo:** `src/pages/Dashboard.tsx`
-
-- Verificar `searchParams.get('status') === 'checking'` ou `localStorage.getItem('cakto_pending')`
-- Mostrar overlay de "Processando pagamento" com listener Realtime
-- Quando ativado, limpar localStorage e searchParams
+Ambos ja estao corretos e funcionais.
 
 ---
 
 ## Secao Tecnica
 
-### Arquivos Criados
+### Tabela criada
+| Tabela | Descricao |
+|--------|-----------|
+| `webhook_logs` | Armazena todos os payloads recebidos pelo webhook, com RLS admin-only |
+
+### Arquivos modificados
 | Arquivo | Descricao |
-|---------|-----------|
-| `supabase/functions/cakto-webhook/index.ts` | Webhook para receber confirmacao de pagamento Cakto |
+|--------|-----------|
+| `supabase/functions/cakto-webhook/index.ts` | Adicionar insert em `webhook_logs` para cada requisicao |
+| `src/pages/AdminDashboard.tsx` | Nova aba "Pagamentos" com monitor de logs, simulador e link de teste |
 
-### Arquivos Modificados
-| Arquivo | Descricao |
-|---------|-----------|
-| `src/pages/Payment.tsx` | Redirecionar para URL Cakto em vez de invocar Edge Function |
-| `src/pages/Dashboard.tsx` | Substituir polling AbacatePay por Realtime listener |
-| `src/pages/AdminDashboard.tsx` | Remover abas API e Testes |
+### RLS
+- `webhook_logs`: SELECT e DELETE apenas para admin. INSERT feito via Service Role no webhook (bypassa RLS).
 
-### Arquivos Deletados
-| Arquivo |
-|---------|
-| `supabase/functions/create-checkout/index.ts` |
-| `supabase/functions/admin-test-checkout/index.ts` |
-| `supabase/functions/check-payment/index.ts` |
-| `supabase/functions/payment-webhook/index.ts` |
-
-### Config
-- `supabase/config.toml`: remover 4 funcoes antigas, adicionar `cakto-webhook`
-
-### Formato esperado do webhook Cakto
-O webhook da Cakto tipicamente envia um JSON com status de pagamento. A Edge Function ira verificar campos comuns como `status`, `payment_status`, ou `event` para detectar pagamento confirmado, e extrair `external_id` do payload para identificar o usuario.
+### Permissoes
+O webhook ja usa `SUPABASE_SERVICE_ROLE_KEY` (configurado nos secrets), o que permite inserir em `webhook_logs` e atualizar `profiles` sem restricoes de RLS.
 
