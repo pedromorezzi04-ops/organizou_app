@@ -20,7 +20,7 @@ interface WebhookLog {
   user_id: string | null;
 }
 
-const CAKTO_CHECKOUT_URL = 'https://pay.cakto.com.br/98ajdxe_784173';
+const CAKTO_CHECKOUT_URL = 'https://pay.cakto.com.br/dfgjcuf_784254';
 
 const PaymentsTab = () => {
   const { user } = useAuth();

@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import logoImg from '@/assets/logo.png';
 
-const CAKTO_CHECKOUT_URL = 'https://pay.cakto.com.br/98ajdxe_784173';
+const CAKTO_CHECKOUT_URL = 'https://pay.cakto.com.br/dfgjcuf_784254';
 
 const Payment = () => {
   const { user, signOut } = useAuth();
