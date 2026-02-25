@@ -1,97 +1,58 @@
 
 
-# Implementacao: Webhook Logs + Painel Admin de Pagamentos
+# Painel de Assinaturas Ativas no Admin
 
-## Situacao Atual
+## Problema
 
-- `cakto-webhook` ja existe e funciona (recebe POST, atualiza profiles)
-- `Payment.tsx` ja redireciona para Cakto com `external_id`
-- `Dashboard.tsx` ja tem `PaymentChecker` com Realtime + polling
-- `AdminDashboard.tsx` tem 2 abas: Usuarios e Cupons
-
-Tudo no frontend e webhook ja esta funcional. Falta apenas a tabela de logs e o painel de diagnostico admin.
-
----
+A RPC `admin_get_all_profiles` atual nao retorna `subscription_status` nem `subscription_expires_at`. Preciso de uma nova RPC ou atualizar a existente para incluir esses campos, e criar uma nova aba no painel admin.
 
 ## Alteracoes
 
-### 1. Migracao SQL: Criar tabela `webhook_logs`
+### 1. Migracao SQL: Atualizar RPC `admin_get_all_profiles`
+
+Recriar a funcao para incluir `subscription_status`, `subscription_expires_at`, `is_legacy` e `trial_started_at`:
 
 ```sql
-CREATE TABLE public.webhook_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  payload jsonb NOT NULL DEFAULT '{}',
-  status text NOT NULL DEFAULT 'received',
-  event_type text,
-  user_id uuid
-);
-
-ALTER TABLE public.webhook_logs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Only admins can view webhook_logs"
-  ON public.webhook_logs FOR SELECT
-  USING (public.has_role(auth.uid(), 'admin'));
-
-CREATE POLICY "Only admins can delete webhook_logs"
-  ON public.webhook_logs FOR DELETE
-  USING (public.has_role(auth.uid(), 'admin'));
+CREATE OR REPLACE FUNCTION public.admin_get_all_profiles()
+RETURNS TABLE(
+  id uuid, user_id uuid, business_name text, status text, 
+  created_at timestamptz, email text,
+  subscription_status text, subscription_expires_at timestamptz,
+  is_legacy boolean, trial_started_at timestamptz
+)
+...
 ```
 
-Sem politica de INSERT para usuarios normais — apenas o Service Role (webhook) insere.
+### 2. Nova aba "Assinaturas" no Admin Dashboard
 
-### 2. Atualizar Edge Function `cakto-webhook`
+**Arquivo:** `src/components/admin/SubscriptionsTab.tsx` (novo)
 
-**Arquivo:** `supabase/functions/cakto-webhook/index.ts`
-
-Adicionar log em `webhook_logs` para cada requisicao recebida (antes de processar):
-
-```typescript
-await serviceClient.from("webhook_logs").insert({
-  payload: body,
-  status: isPaid ? "paid" : "ignored",
-  event_type: statusLower || "unknown",
-  user_id: externalId || null,
-});
-```
-
-Registrar tambem em caso de erro (status "error").
-
-### 3. Nova aba Admin: "Pagamentos"
+Componente que:
+- Chama `admin_get_all_profiles` (atualizada)
+- Mostra cards resumo: Total Assinantes Ativos, Em Trial, Expirados, Legacy
+- Tabela filtrada mostrando: Email, Negocio, Status da Assinatura (badge colorido), Data de Expiracao, Legacy
+- Filtro por status (Todos / Active / Trial / Expired / Legacy)
 
 **Arquivo:** `src/pages/AdminDashboard.tsx`
 
-Criar componente `PaymentsTab` com:
+- Adicionar aba "Assinaturas" com icone `Crown` ou `BadgeCheck`
+- Atualizar `grid-cols-3` para `grid-cols-4`
 
-- **Tabela de Logs:** Lista os ultimos registros de `webhook_logs` com colunas: Data, Tipo, Status, User ID, e um botao para expandir/ver o payload JSON completo
-- **Botao Atualizar:** Recarrega os logs manualmente
-- **Simulador:** Botao "Simular Pagamento" que chama `supabase.functions.invoke('cakto-webhook')` com payload simulado contendo um `user_id` selecionado da lista de usuarios, para testar a ativacao
-- **Link de Teste Real:** Botao que gera e abre `https://pay.cakto.com.br/98ajdxe_784173?external_id={admin_user_id}` para o admin testar o fluxo real
+### 3. Visual dos Badges
 
-Atualizar TabsList para `grid-cols-3` (Usuarios, Cupons, Pagamentos).
+| Status | Cor | Label |
+|--------|-----|-------|
+| active | Emerald | Ativo |
+| trial | Blue | Trial |
+| expired | Orange | Expirado |
+| inactive | Gray | Inativo |
+| is_legacy | Purple | Legacy |
 
-### 4. Sem alteracoes em Payment.tsx e Dashboard.tsx
+### Arquivos
 
-Ambos ja estao corretos e funcionais.
-
----
-
-## Secao Tecnica
-
-### Tabela criada
-| Tabela | Descricao |
-|--------|-----------|
-| `webhook_logs` | Armazena todos os payloads recebidos pelo webhook, com RLS admin-only |
-
-### Arquivos modificados
-| Arquivo | Descricao |
-|--------|-----------|
-| `supabase/functions/cakto-webhook/index.ts` | Adicionar insert em `webhook_logs` para cada requisicao |
-| `src/pages/AdminDashboard.tsx` | Nova aba "Pagamentos" com monitor de logs, simulador e link de teste |
-
-### RLS
-- `webhook_logs`: SELECT e DELETE apenas para admin. INSERT feito via Service Role no webhook (bypassa RLS).
-
-### Permissoes
-O webhook ja usa `SUPABASE_SERVICE_ROLE_KEY` (configurado nos secrets), o que permite inserir em `webhook_logs` e atualizar `profiles` sem restricoes de RLS.
+| Acao | Arquivo |
+|------|---------|
+| Criar | `src/components/admin/SubscriptionsTab.tsx` |
+| Modificar | `src/pages/AdminDashboard.tsx` (nova aba) |
+| Migracao | Atualizar RPC `admin_get_all_profiles` |
 
