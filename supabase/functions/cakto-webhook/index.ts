@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -51,13 +51,17 @@ Deno.serve(async (req) => {
       statusLower.includes("confirmed") ||
       statusLower.includes("active");
 
-    // Log every request
-    await serviceClient.from("webhook_logs").insert({
-      payload: body,
-      status: isPaid ? "paid" : "ignored",
-      event_type: statusLower || "unknown",
-      user_id: externalId || null,
-    });
+    // Log IMMEDIATELY - before any processing
+    try {
+      await serviceClient.from("webhook_logs").insert({
+        payload: body,
+        status: isPaid ? "paid" : "received",
+        event_type: statusLower || "unknown",
+        user_id: externalId || null,
+      });
+    } catch (logErr) {
+      console.error("Failed to write initial log:", logErr);
+    }
 
     if (!externalId) {
       console.error("No external_id found in payload:", JSON.stringify(body));
