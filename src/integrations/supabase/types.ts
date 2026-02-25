@@ -326,7 +326,11 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          is_legacy: boolean
           status: string
+          subscription_expires_at: string
+          subscription_status: string
+          trial_started_at: string
           user_id: string
         }[]
       }

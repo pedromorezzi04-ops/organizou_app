@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Shield, Users, UserCheck, UserX, RefreshCw, Tag, Plus, Trash2, Loader2, CreditCard } from 'lucide-react';
+import { Shield, Users, UserCheck, UserX, RefreshCw, Tag, Plus, Trash2, Loader2, CreditCard, Crown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import PaymentsTab from '@/components/admin/PaymentsTab';
+import SubscriptionsTab from '@/components/admin/SubscriptionsTab';
 
 interface UserProfile {
   id: string;
@@ -213,12 +214,14 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="users">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="users" className="gap-1.5"><Users className="w-4 h-4" />Usuários</TabsTrigger>
+            <TabsTrigger value="subscriptions" className="gap-1.5"><Crown className="w-4 h-4" />Assinaturas</TabsTrigger>
             <TabsTrigger value="coupons" className="gap-1.5"><Tag className="w-4 h-4" />Cupons</TabsTrigger>
             <TabsTrigger value="payments" className="gap-1.5"><CreditCard className="w-4 h-4" />Pagamentos</TabsTrigger>
           </TabsList>
           <TabsContent value="users"><UsersTab /></TabsContent>
+          <TabsContent value="subscriptions"><SubscriptionsTab /></TabsContent>
           <TabsContent value="coupons"><CouponsTab /></TabsContent>
           <TabsContent value="payments"><PaymentsTab /></TabsContent>
         </Tabs>
