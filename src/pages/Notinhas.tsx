@@ -96,7 +96,7 @@ const Notinhas = () => {
         ) : filteredInstallments.length === 0 ? (
           <InstallmentEmptyState isSearchResult={!!searchQuery.trim() && installments && installments.length > 0} />
         ) : viewMode === 'list' ? (
-          <div className="space-y-2">
+          <div className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
             {filteredInstallments.map((installment, index) => (
               <InstallmentCard
                 key={installment.id}
