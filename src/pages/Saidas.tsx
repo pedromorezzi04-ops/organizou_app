@@ -94,7 +94,7 @@ const Saidas = () => {
             </Button>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
             {transactionsLoading ? (
               [0, 1, 2].map(i => (
                 <Skeleton key={i} className="h-[72px] rounded-xl" style={{ animationDelay: `${i * 100}ms` }} />
@@ -124,7 +124,7 @@ const Saidas = () => {
             </Button>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
             {recurringLoading ? (
               [0, 1].map(i => (
                 <Skeleton key={i} className="h-[72px] rounded-xl" style={{ animationDelay: `${i * 100}ms` }} />
@@ -180,7 +180,7 @@ const ExpenseCard = ({
 
   return (
     <div className={cn(
-      "glass rounded-xl p-4 shadow-card border border-destructive/10 transition-all duration-200",
+      "glass rounded-xl p-4 lg:p-5 shadow-card border border-destructive/10 transition-all duration-200",
       "hover:shadow-lift hover:-translate-y-0.5 active:scale-[0.98]"
     )}>
       <div className="flex items-center gap-3">
@@ -218,7 +218,7 @@ const RecurringExpenseCard = ({
   onDelete: (id: string) => void;
 }) => (
   <div className={cn(
-    "glass rounded-xl p-4 shadow-card border border-border/50 transition-all duration-200",
+    "glass rounded-xl p-4 lg:p-5 shadow-card border border-border/50 transition-all duration-200",
     "hover:shadow-lift hover:-translate-y-0.5 active:scale-[0.98]"
   )}>
     <div className="flex items-center gap-3">

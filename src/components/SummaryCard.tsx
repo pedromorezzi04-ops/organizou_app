@@ -45,7 +45,7 @@ const SummaryCard = ({ title, value, icon, variant, index = 0 }: SummaryCardProp
   return (
     <div
       className={cn(
-        "rounded-xl p-4 border shadow-card backdrop-blur-sm",
+        "rounded-xl p-4 lg:p-6 border shadow-card backdrop-blur-sm",
         "transition-all duration-200 hover:shadow-lift hover:-translate-y-0.5",
         "animate-fade-in",
         config.bg,
@@ -54,12 +54,12 @@ const SummaryCard = ({ title, value, icon, variant, index = 0 }: SummaryCardProp
       style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'backwards' }}
     >
       <div className="flex items-start gap-3">
-        <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", config.icon)}>
+        <div className={cn("w-9 h-9 lg:w-12 lg:h-12 rounded-lg flex items-center justify-center shrink-0", config.icon)}>
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-muted-foreground truncate">{title}</p>
-          <p className={cn("text-lg font-bold truncate tabular-nums mt-0.5", config.text)}>
+          <p className="text-xs lg:text-sm font-medium text-muted-foreground truncate">{title}</p>
+          <p className={cn("text-lg lg:text-2xl font-bold truncate tabular-nums mt-0.5", config.text)}>
             {formatCurrency(value)}
           </p>
         </div>

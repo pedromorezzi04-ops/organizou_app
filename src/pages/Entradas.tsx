@@ -58,7 +58,7 @@ const Entradas = () => {
           </Button>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
           {isLoading ? (
             <>
               {[0, 1, 2].map(i => (
@@ -112,7 +112,7 @@ const TransactionCard = ({
 
   return (
     <div className={cn(
-      "glass rounded-xl p-4 shadow-card transition-all duration-200",
+      "glass rounded-xl p-4 lg:p-5 shadow-card transition-all duration-200",
       "hover:shadow-lift hover:-translate-y-0.5 active:scale-[0.98]",
       "border",
       isPaid ? "border-emerald/20" : "border-amber/20"

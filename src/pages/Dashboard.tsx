@@ -168,7 +168,7 @@ const Dashboard = () => {
         <div className="lg:grid lg:grid-cols-2 lg:gap-5 space-y-5 lg:space-y-0">
           {/* Hero card: Sobrou no mês */}
           <div className={cn(
-            "rounded-2xl p-6 text-primary-foreground relative overflow-hidden",
+            "rounded-2xl p-6 lg:p-8 text-primary-foreground relative overflow-hidden",
             "bg-gradient-to-br from-primary via-primary/90 to-emerald",
             "shadow-lift animate-fade-in"
           )}>
@@ -180,7 +180,7 @@ const Dashboard = () => {
               <Skeleton className="h-10 w-40 bg-primary-foreground/20 mt-1" />
             ) : (
               <p className={cn(
-                "text-3xl font-bold mt-1 tabular-nums relative z-10",
+                "text-3xl lg:text-4xl font-bold mt-1 tabular-nums relative z-10",
                 summary.sobrou < 0 && "text-red-200"
               )}>
                 {formatCurrency(summary.sobrou)}
@@ -197,7 +197,7 @@ const Dashboard = () => {
               <p className="text-xs font-semibold text-muted-foreground mb-4 uppercase tracking-wider">
                 Fluxo semanal do mês
               </p>
-              <div className="h-[100px] lg:h-[160px]">
+              <div className="h-[100px] lg:h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={weeklyData} barGap={3} barCategoryGap="20%">
                     <XAxis
