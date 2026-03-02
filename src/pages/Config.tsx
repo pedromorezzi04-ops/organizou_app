@@ -142,7 +142,7 @@ const Config = () => {
 
   return (
     <Layout title="Configurações">
-      <div className="space-y-6">
+      <div className="max-w-lg mx-auto space-y-6">
         {/* Perfil do negócio */}
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Meu Negócio</h2>

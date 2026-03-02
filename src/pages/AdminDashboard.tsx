@@ -202,7 +202,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
             <Shield className="w-6 h-6 text-primary" />
