@@ -204,47 +204,47 @@ const Graficos = () => {
     <Layout title="Gráficos">
       <div className="space-y-4 pb-4">
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
           <Card className="bg-green-50 border-green-200">
-            <CardContent className="p-3">
+            <CardContent className="p-3 lg:p-5">
               <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-green-600" />
-                <span className="text-xs text-green-700">Total Entradas</span>
+                <TrendingUp className="w-4 h-4 lg:w-5 lg:h-5 text-green-600" />
+                <span className="text-xs lg:text-sm text-green-700">Total Entradas</span>
               </div>
-              <p className="text-lg font-bold text-green-700 mt-1">
+              <p className="text-lg lg:text-2xl font-bold text-green-700 mt-1 lg:mt-2">
                 {formatCurrency(totalIncome)}
               </p>
             </CardContent>
           </Card>
           <Card className="bg-red-50 border-red-200">
-            <CardContent className="p-3">
+            <CardContent className="p-3 lg:p-5">
               <div className="flex items-center gap-2">
-                <TrendingDown className="w-4 h-4 text-red-600" />
-                <span className="text-xs text-red-700">Total Saídas</span>
+                <TrendingDown className="w-4 h-4 lg:w-5 lg:h-5 text-red-600" />
+                <span className="text-xs lg:text-sm text-red-700">Total Saídas</span>
               </div>
-              <p className="text-lg font-bold text-red-700 mt-1">
+              <p className="text-lg lg:text-2xl font-bold text-red-700 mt-1 lg:mt-2">
                 {formatCurrency(totalExpense)}
               </p>
             </CardContent>
           </Card>
           <Card className="bg-yellow-50 border-yellow-200">
-            <CardContent className="p-3">
+            <CardContent className="p-3 lg:p-5">
               <div className="flex items-center gap-2">
-                <PieChartIcon className="w-4 h-4 text-yellow-600" />
-                <span className="text-xs text-yellow-700">A Receber</span>
+                <PieChartIcon className="w-4 h-4 lg:w-5 lg:h-5 text-yellow-600" />
+                <span className="text-xs lg:text-sm text-yellow-700">A Receber</span>
               </div>
-              <p className="text-lg font-bold text-yellow-700 mt-1">
+              <p className="text-lg lg:text-2xl font-bold text-yellow-700 mt-1 lg:mt-2">
                 {formatCurrency(totalPending)}
               </p>
             </CardContent>
           </Card>
           <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-3">
+            <CardContent className="p-3 lg:p-5">
               <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-blue-600" />
-                <span className="text-xs text-blue-700">Saldo</span>
+                <BarChart3 className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600" />
+                <span className="text-xs lg:text-sm text-blue-700">Saldo</span>
               </div>
-              <p className={`text-lg font-bold mt-1 ${totalIncome - totalExpense >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
+              <p className={`text-lg lg:text-2xl font-bold mt-1 lg:mt-2 ${totalIncome - totalExpense >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
                 {formatCurrency(totalIncome - totalExpense)}
               </p>
             </CardContent>
@@ -259,14 +259,14 @@ const Graficos = () => {
             <TabsTrigger value="forecast">Previsão</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-4 mt-4 lg:max-w-4xl lg:mx-auto">
+          <TabsContent value="overview" className="space-y-4 lg:space-y-5 mt-4 lg:max-w-4xl lg:mx-auto">
             {/* Bar Chart - Income vs Expense */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Entradas vs Saídas (Últimos 6 meses)</CardTitle>
+              <CardHeader className="pb-2 lg:pb-4">
+                <CardTitle className="text-sm lg:text-base font-medium">Entradas vs Saídas (Últimos 6 meses)</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                <ChartContainer config={chartConfig} className="h-[250px] lg:h-[320px] w-full">
                   <BarChart data={monthlyData} accessibilityLayer>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="month" tickLine={false} axisLine={false} />
@@ -285,11 +285,11 @@ const Graficos = () => {
 
             {/* Line Chart - Balance Evolution */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Evolução do Saldo</CardTitle>
+              <CardHeader className="pb-2 lg:pb-4">
+                <CardTitle className="text-sm lg:text-base font-medium">Evolução do Saldo</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={chartConfig} className="h-[200px] w-full">
+                <ChartContainer config={chartConfig} className="h-[200px] lg:h-[280px] w-full">
                   <AreaChart data={monthlyData} accessibilityLayer>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="month" tickLine={false} axisLine={false} />
@@ -318,12 +318,12 @@ const Graficos = () => {
             </Card>
             {/* Pie Chart - Cash Flow */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Entrada x Saída (Em Caixa)</CardTitle>
+              <CardHeader className="pb-2 lg:pb-4">
+                <CardTitle className="text-sm lg:text-base font-medium">Entrada x Saída (Em Caixa)</CardTitle>
               </CardHeader>
               <CardContent>
                 {cashFlowPieData.length > 0 ? (
-                  <ChartContainer config={chartConfig} className="h-[200px] w-full">
+                  <ChartContainer config={chartConfig} className="h-[200px] lg:h-[280px] w-full">
                     <PieChart accessibilityLayer>
                       <ChartTooltip
                         content={<ChartTooltipContent />}
@@ -347,7 +347,7 @@ const Graficos = () => {
                     </PieChart>
                   </ChartContainer>
                 ) : (
-                  <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                  <div className="h-[200px] lg:h-[280px] flex items-center justify-center text-muted-foreground">
                     Nenhuma transação registrada
                   </div>
                 )}
@@ -356,12 +356,12 @@ const Graficos = () => {
 
             {/* Pie Chart - Estimated Flow */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Entrada x Saída (Estimado)</CardTitle>
+              <CardHeader className="pb-2 lg:pb-4">
+                <CardTitle className="text-sm lg:text-base font-medium">Entrada x Saída (Estimado)</CardTitle>
               </CardHeader>
               <CardContent>
                 {estimatedFlowPieData.length > 0 ? (
-                  <ChartContainer config={chartConfig} className="h-[200px] w-full">
+                  <ChartContainer config={chartConfig} className="h-[200px] lg:h-[280px] w-full">
                     <PieChart accessibilityLayer>
                       <ChartTooltip
                         content={<ChartTooltipContent />}
@@ -385,7 +385,7 @@ const Graficos = () => {
                     </PieChart>
                   </ChartContainer>
                 ) : (
-                  <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                  <div className="h-[200px] lg:h-[280px] flex items-center justify-center text-muted-foreground">
                     Nenhuma transação pendente
                   </div>
                 )}
@@ -393,15 +393,15 @@ const Graficos = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="categories" className="space-y-4 mt-4 lg:max-w-4xl lg:mx-auto">
+          <TabsContent value="categories" className="space-y-4 lg:space-y-5 mt-4 lg:max-w-4xl lg:mx-auto">
             {/* Pie Chart - Expense Categories */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Saídas por Categoria</CardTitle>
+              <CardHeader className="pb-2 lg:pb-4">
+                <CardTitle className="text-sm lg:text-base font-medium">Saídas por Categoria</CardTitle>
               </CardHeader>
               <CardContent>
                 {pieData.length > 0 ? (
-                  <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                  <ChartContainer config={chartConfig} className="h-[250px] lg:h-[320px] w-full">
                     <PieChart accessibilityLayer>
                       <ChartTooltip
                         content={<ChartTooltipContent />}
@@ -424,7 +424,7 @@ const Graficos = () => {
                     </PieChart>
                   </ChartContainer>
                 ) : (
-                  <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                  <div className="h-[200px] lg:h-[280px] flex items-center justify-center text-muted-foreground">
                     Nenhuma saída categorizada
                   </div>
                 )}
@@ -433,12 +433,12 @@ const Graficos = () => {
 
             {/* Pie Chart - Payment Methods */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Entradas por Forma de Pagamento</CardTitle>
+              <CardHeader className="pb-2 lg:pb-4">
+                <CardTitle className="text-sm lg:text-base font-medium">Entradas por Forma de Pagamento</CardTitle>
               </CardHeader>
               <CardContent>
                 {paymentPieData.length > 0 ? (
-                  <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                  <ChartContainer config={chartConfig} className="h-[250px] lg:h-[320px] w-full">
                     <PieChart accessibilityLayer>
                       <ChartTooltip
                         content={<ChartTooltipContent />}
@@ -461,7 +461,7 @@ const Graficos = () => {
                     </PieChart>
                   </ChartContainer>
                 ) : (
-                  <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                  <div className="h-[200px] lg:h-[280px] flex items-center justify-center text-muted-foreground">
                     Nenhuma entrada com método de pagamento
                   </div>
                 )}
@@ -469,14 +469,14 @@ const Graficos = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="forecast" className="space-y-4 mt-4 lg:max-w-4xl lg:mx-auto">
+          <TabsContent value="forecast" className="space-y-4 lg:space-y-5 mt-4 lg:max-w-4xl lg:mx-auto">
             {/* Installments Forecast */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Notinhas por Mês</CardTitle>
+              <CardHeader className="pb-2 lg:pb-4">
+                <CardTitle className="text-sm lg:text-base font-medium">Notinhas por Mês</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                <ChartContainer config={chartConfig} className="h-[250px] lg:h-[320px] w-full">
                   <BarChart data={monthlyData} accessibilityLayer>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="month" tickLine={false} axisLine={false} />
@@ -495,11 +495,11 @@ const Graficos = () => {
 
             {/* Future Installments */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Previsão de Recebimentos</CardTitle>
+              <CardHeader className="pb-2 lg:pb-4">
+                <CardTitle className="text-sm lg:text-base font-medium">Previsão de Recebimentos</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer config={chartConfig} className="h-[200px] w-full">
+                <ChartContainer config={chartConfig} className="h-[200px] lg:h-[280px] w-full">
                   <LineChart data={monthlyData} accessibilityLayer>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="month" tickLine={false} axisLine={false} />
