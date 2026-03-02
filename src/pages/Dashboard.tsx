@@ -165,7 +165,7 @@ const Dashboard = () => {
       <div className="space-y-5">
         <ExpirationBanner />
         {/* Hero + Chart side-by-side on desktop */}
-        <div className="lg:grid lg:grid-cols-2 lg:gap-5 space-y-5 lg:space-y-0">
+        <div className="space-y-5">
           {/* Hero card: Sobrou no mês */}
           <div className={cn(
             "rounded-2xl p-6 lg:p-8 text-primary-foreground relative overflow-hidden",
