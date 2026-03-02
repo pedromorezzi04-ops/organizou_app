@@ -16,7 +16,7 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <header className="sticky top-0 z-40 glass-strong border-b">
-        <div className="container max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="container max-w-lg lg:max-w-6xl mx-auto px-4 lg:px-8 h-14 flex items-center justify-between">
           <img src={logo} alt="Organizou+" className="h-10 w-auto object-contain" />
           <button
             onClick={() => setSearchOpen(true)}
@@ -27,7 +27,7 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
           </button>
         </div>
       </header>
-      <main className="container max-w-lg mx-auto px-4 py-4">
+      <main className="container max-w-lg lg:max-w-6xl mx-auto px-4 lg:px-8 py-4">
         {children}
       </main>
       <BottomNav />
