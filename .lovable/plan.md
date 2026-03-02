@@ -1,34 +1,27 @@
 
 
-# Ajuste de Simetria do Dashboard e Reversao de Layout Admin/Config
+# Aumento Proporcional dos Cards na Pagina Graficos
 
-## 1. Dashboard — Hero full-width alinhado com os 4 cards
+## Mudancas em `src/pages/Graficos.tsx`
 
-O hero "Sobrou no mes" esta atualmente em `lg:grid-cols-2` lado a lado com o grafico. Para alinhar com os 4 cards abaixo, remover o grid 2-col e fazer o hero ocupar 100% da largura do container. O grafico semanal fica abaixo do hero (antes dos 4 cards), tambem full-width.
+### 1. Summary Cards (4 cards do topo)
+- Gap do grid: `gap-3` → `gap-3 lg:gap-4`
+- CardContent padding: `p-3` → `p-3 lg:p-5`
+- Icones: `w-4 h-4` → `w-4 h-4 lg:w-5 lg:h-5`
+- Titulos: `text-xs` → `text-xs lg:text-sm`
+- Valores: `text-lg` → `text-lg lg:text-2xl`
+- Margem do valor: `mt-1` → `mt-1 lg:mt-2`
 
-**Arquivo:** `src/pages/Dashboard.tsx`
-- Linha 168: remover `lg:grid lg:grid-cols-2 lg:gap-5` do wrapper hero+chart — usar apenas `space-y-5`
-- Manter todos os estilos proporcionais (lg:p-8, lg:text-4xl, lg:h-[200px])
+### 2. Chart Cards (todos os cards com graficos nas 3 tabs)
+- CardHeader padding: `pb-2` → `pb-2 lg:pb-4`
+- CardTitle: `text-sm` → `text-sm lg:text-base`
+- Chart heights aumentados proporcionalmente:
+  - `h-[250px]` → `h-[250px] lg:h-[320px]`
+  - `h-[200px]` → `h-[200px] lg:h-[280px]`
+- Empty states: `h-[200px]` → `h-[200px] lg:h-[280px]`
 
-## 2. Config — Conteudo compacto dentro do Layout expandido
+### 3. Espacamento geral
+- `space-y-4` nas tabs → `space-y-4 lg:space-y-5`
 
-Config usa `<Layout>` que tem `lg:max-w-6xl`. Em vez de alterar o Layout global, envolver o conteudo do Config em um wrapper `max-w-lg mx-auto` para manter o design estreito original.
-
-**Arquivo:** `src/pages/Config.tsx`
-- Linha 145: `<div className="space-y-6">` → `<div className="max-w-lg mx-auto space-y-6">`
-
-## 3. Admin — Reverter para layout compacto
-
-Reduzir o container do painel admin de `max-w-6xl` para `max-w-3xl` para centralizar e compactar.
-
-**Arquivo:** `src/pages/AdminDashboard.tsx`
-- Linha 205: `max-w-6xl` → `max-w-3xl`
-
-**Arquivo:** `src/components/admin/PaymentsTab.tsx`
-- Remover `lg:grid lg:grid-cols-2 lg:gap-4` do wrapper, voltar para `space-y-4` empilhado
-
-## Salvaguardas
-- Todas as outras paginas mantem o layout expandido
-- Zero alteracao em backend/logica
-- Mobile inalterado
+Todas as mudancas usam prefixo `lg:` — mobile inalterado.
 
