@@ -1,91 +1,49 @@
 
 
-# Refatoracao de Seguranca e Inteligencia do Fluxo de Pagamento
+# Redesign Desktop-First: Expansao de Largura e Redistribuicao
 
-## Resumo
+## Situacao Atual
 
-Tres frentes de trabalho: (1) blindar o webhook contra chamadas nao autorizadas e reprocessamento duplicado, (2) exibir aviso de vencimento proximo no Dashboard, (3) manter a logica de bloqueio da ProtectedRoute intacta.
+O layout inteiro esta limitado a `max-w-lg` (~32rem/512px) — header, main e BottomNav. Isso e otimo para mobile mas desperdiça ~70% da tela em desktop.
 
----
+## Alteracoes
 
-## 1. Edge Function `cakto-webhook` — Seguranca e Idempotencia
+### 1. `src/components/Layout.tsx` — Expandir containers
+- Header: `max-w-lg` → `max-w-lg lg:max-w-6xl`
+- Main: `max-w-lg` → `max-w-lg lg:max-w-6xl`
+- Padding lateral: `px-4` → `px-4 lg:px-8`
 
-### 1a. Validacao de Token
+### 2. `src/components/BottomNav.tsx` — Expandir nav
+- `max-w-lg` → `max-w-lg lg:max-w-6xl`
 
-Adicionar no inicio da funcao, apos o parse do body, uma verificacao do header `x-cakto-token`. O token esperado sera lido de `system_settings` (chave `cakto_webhook_token`) via `serviceClient`. Se o header nao existir ou nao corresponder, retornar 401 Unauthorized.
+### 3. `src/pages/Dashboard.tsx` — Grid responsivo
+- Summary cards: `grid-cols-2` → `grid-cols-2 lg:grid-cols-4` (4 cards em linha no desktop)
+- Hero card + chart: colocar lado a lado no desktop usando `lg:grid lg:grid-cols-2 lg:gap-5` no container pai, mantendo empilhado no mobile
+- Chart height: `h-[100px]` → `h-[100px] lg:h-[160px]`
 
-```text
-Request → Verifica x-cakto-token → Token invalido? → 401
-                                  → Token valido? → Continua
-```
+### 4. `src/pages/Entradas.tsx` e `src/pages/Saidas.tsx` — Listas mais largas
+- Nenhuma mudanca estrutural necessaria — o container pai ja vai expandir via Layout. As transaction cards ja usam `flex` e vao esticar naturalmente.
 
-**Detalhe tecnico:** O admin devera cadastrar o token na tabela `system_settings` com `key_name = 'cakto_webhook_token'`. Na Cakto, configurar o mesmo token no campo de header customizado do webhook.
+### 5. `src/pages/Notinhas.tsx` — Grid de cards
+- No modo lista, usar `lg:grid lg:grid-cols-2 lg:gap-3` para distribuir cards em 2 colunas no desktop.
 
-### 1b. Checagem de Duplicidade (Idempotencia)
+### 6. `src/pages/AdminDashboard.tsx` — Ja usa `max-w-6xl`, sem mudanca necessaria.
 
-Antes de atualizar o perfil, extrair um ID unico da transacao do payload (campos como `body.id`, `body.transaction_id`, `body.data?.id`). Consultar `webhook_logs` buscando por esse ID no campo `payload->>'transaction_id'` com `status = 'success'`. Se ja existir, retornar 200 com `{ already_processed: true }` sem processar novamente.
+### 7. `src/components/admin/PaymentsTab.tsx` — Side-by-side
+- Simulator card e Webhook Logs card: envolver em `lg:grid lg:grid-cols-2 lg:gap-4` para ficarem lado a lado no desktop.
 
-Apos o UPDATE bem-sucedido no perfil, gravar o log com `status = 'success'` incluindo o `transaction_id` no payload para referencia futura.
+### Exclusoes
+- `src/pages/Config.tsx` — NAO sera alterado
+- Backend/RLS — NAO sera alterado
+- Mobile — continua identico (todas as mudancas usam breakpoint `lg:`)
 
-### 1c. Tratamento de Erros (ja existente, ajustar)
-
-O try/catch atual ja grava erros. Ajustar para incluir o `transaction_id` quando disponivel e padronizar o status como `'error'`.
-
-### Arquivo modificado
-- `supabase/functions/cakto-webhook/index.ts`
-
-### Necessidade: Secret para o token
-- O admin precisa inserir o valor do token na tabela `system_settings` com key `cakto_webhook_token`. Isso pode ser feito pelo painel admin existente ou via uma migracao com valor placeholder.
-
----
-
-## 2. Banner de Vencimento no Dashboard
-
-### Logica
-
-No componente `Dashboard`, usar o hook `useSubscription` que ja retorna o estado da assinatura. Adicionar uma consulta a `subscription_expires_at` do perfil do usuario. Se o estado for `active` e a expiracao for em menos de 5 dias, exibir um banner de aviso.
-
-### Implementacao
-
-Criar um componente `ExpirationBanner` dentro de `Dashboard.tsx`:
-- Buscar `subscription_expires_at` via `get_subscription_info` RPC (ja disponivel)
-- Calcular dias restantes: `Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24))`
-- Se <= 5 dias e > 0: exibir banner amarelo com icone de alerta
-- Texto: "Sua assinatura vence em X dia(s). Renove agora para evitar o bloqueio de dados."
-- Botao "Renovar" com `Link` para `/payment`
-- Usuarios legacy/admin nao veem o banner
-
-### Arquivo modificado
-- `src/pages/Dashboard.tsx`
-
----
-
-## 3. Garantia de Persistencia
-
-A logica da `ProtectedRoute` em `App.tsx` e `useBlockedCheck.ts` permanece **inalterada**. O redirecionamento para `/payment` continua sendo acionado apenas quando `needsPayment = true` (assinatura expirada ou pendente). O banner do item 2 e apenas informativo e nao bloqueia acesso.
-
-A Edge Function continua usando `SUPABASE_SERVICE_ROLE_KEY` (Service Role) para bypass de RLS ao atualizar o perfil.
-
----
-
-## Arquivos Modificados
+### Arquivos Modificados
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `supabase/functions/cakto-webhook/index.ts` | Token validation, idempotencia, log com transaction_id |
-| `src/pages/Dashboard.tsx` | Componente ExpirationBanner com aviso de 5 dias |
-
-## Fluxo Resultante do Webhook
-
-```text
-POST /cakto-webhook
-  → Verifica x-cakto-token (401 se invalido)
-  → Parse body, extrai external_id e transaction_id
-  → Log inicial na webhook_logs
-  → Verifica duplicidade por transaction_id (200 se ja processado)
-  → Verifica se status = paid
-  → UPDATE profiles (subscription_status=active, expires_at=+1 mes)
-  → Log final com status=success
-  → 200 OK
-```
+| `Layout.tsx` | max-w-lg → lg:max-w-6xl, padding |
+| `BottomNav.tsx` | max-w-lg → lg:max-w-6xl |
+| `Dashboard.tsx` | Grid 4 cols, hero+chart side-by-side |
+| `Notinhas.tsx` | Grid 2 cols no desktop |
+| `PaymentsTab.tsx` | Simulator + Logs side-by-side |
 
