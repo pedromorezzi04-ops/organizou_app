@@ -204,7 +204,7 @@ const Graficos = () => {
     <Layout title="Gráficos">
       <div className="space-y-4 pb-4">
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Card className="bg-green-50 border-green-200">
             <CardContent className="p-3">
               <div className="flex items-center gap-2">
@@ -259,7 +259,7 @@ const Graficos = () => {
             <TabsTrigger value="forecast">Previsão</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-4 mt-4">
+          <TabsContent value="overview" className="space-y-4 mt-4 lg:max-w-4xl lg:mx-auto">
             {/* Bar Chart - Income vs Expense */}
             <Card>
               <CardHeader className="pb-2">
@@ -393,7 +393,7 @@ const Graficos = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="categories" className="space-y-4 mt-4">
+          <TabsContent value="categories" className="space-y-4 mt-4 lg:max-w-4xl lg:mx-auto">
             {/* Pie Chart - Expense Categories */}
             <Card>
               <CardHeader className="pb-2">
@@ -469,7 +469,7 @@ const Graficos = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="forecast" className="space-y-4 mt-4">
+          <TabsContent value="forecast" className="space-y-4 mt-4 lg:max-w-4xl lg:mx-auto">
             {/* Installments Forecast */}
             <Card>
               <CardHeader className="pb-2">

@@ -68,7 +68,7 @@ const Tabelas = () => {
                     style={{ animationDelay: `${i * 50}ms`, animationFillMode: 'both' }}
                   >
                     <div className={cn(
-                      "glass rounded-xl p-3.5 shadow-card border transition-all duration-200",
+                      "glass rounded-xl p-3.5 lg:p-4 shadow-card border transition-all duration-200",
                       "hover:shadow-lift hover:-translate-y-0.5",
                       t.status === 'paid' ? "border-emerald/15" : "border-amber/15"
                     )}>
@@ -102,7 +102,7 @@ const Tabelas = () => {
                     className="animate-slide-up"
                     style={{ animationDelay: `${i * 50}ms`, animationFillMode: 'both' }}
                   >
-                    <div className="glass rounded-xl p-3.5 shadow-card border border-destructive/10 transition-all duration-200 hover:shadow-lift hover:-translate-y-0.5">
+                    <div className="glass rounded-xl p-3.5 lg:p-4 shadow-card border border-destructive/10 transition-all duration-200 hover:shadow-lift hover:-translate-y-0.5">
                       <div className="flex items-center gap-3">
                         <span className="text-base">{t.category === 'fornecedor' ? '🏭' : t.category === 'insumo' ? '📦' : t.category === 'manutencao' ? '🔧' : '📋'}</span>
                         <span className="text-xs text-muted-foreground w-16 shrink-0">{formatDate(t.created_at)}</span>
@@ -134,7 +134,7 @@ const Tabelas = () => {
                     style={{ animationDelay: `${i * 50}ms`, animationFillMode: 'both' }}
                   >
                     <div className={cn(
-                      "glass rounded-xl p-3.5 shadow-card border transition-all duration-200",
+                      "glass rounded-xl p-3.5 lg:p-4 shadow-card border transition-all duration-200",
                       "hover:shadow-lift hover:-translate-y-0.5",
                       inst.status === 'paid' ? "border-emerald/15" : "border-amber/15"
                     )}>
@@ -199,7 +199,7 @@ const TableEmpty = ({ icon: Icon, message, color }: { icon: React.ElementType; m
 
 const TotalCard = ({ total, variant }: { total: number; variant: 'income' | 'expense' | 'installment' }) => (
   <div className={cn(
-    "glass-strong rounded-xl p-4 shadow-card border animate-fade-in",
+    "glass-strong rounded-xl p-4 lg:p-5 shadow-card border animate-fade-in",
     variant === 'income' && "border-emerald/20",
     variant === 'expense' && "border-destructive/20",
     variant === 'installment' && "border-primary/20",

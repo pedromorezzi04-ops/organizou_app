@@ -277,7 +277,7 @@ const Impostos = () => {
     return (
       <Layout title="Impostos">
         <div className="space-y-6 animate-fade-in">
-          <Card className="glass-strong shadow-card border-border/50">
+          <Card className="glass-strong shadow-card border-border/50 lg:max-w-2xl lg:mx-auto">
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald to-emerald/60 shadow-card">
@@ -362,7 +362,7 @@ const Impostos = () => {
         {isLoading ? (
           <Skeleton className="h-64 w-full rounded-2xl" />
         ) : (
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-navy to-navy-light p-6 shadow-lift animate-scale-in">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-navy to-navy-light p-6 shadow-lift animate-scale-in lg:max-w-2xl lg:mx-auto">
             {/* Decorative blur */}
             <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-emerald/20 blur-3xl" />
             <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-amber/10 blur-2xl" />
@@ -425,7 +425,7 @@ const Impostos = () => {
         )}
 
         {/* History */}
-        <div className="space-y-3">
+        <div className="space-y-3 lg:max-w-3xl lg:mx-auto">
           <h3 className="text-sm font-medium text-muted-foreground px-1">Histórico</h3>
 
           {isLoading ? (
