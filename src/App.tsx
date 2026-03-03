@@ -75,7 +75,7 @@ const AppRoutes = () => (
     <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/blocked" element={<Blocked />} />
     <Route path="/payment" element={<Payment />} />
-    <Route path="/admin-secret-dashboard" element={<AdminDashboard />} />
+    <Route path="/admin-panel" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
     <Route path="/entradas" element={<ProtectedRoute><Entradas /></ProtectedRoute>} />
     <Route path="/saidas" element={<ProtectedRoute><Saidas /></ProtectedRoute>} />

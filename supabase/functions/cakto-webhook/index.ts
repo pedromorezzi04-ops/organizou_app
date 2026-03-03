@@ -34,19 +34,30 @@ Deno.serve(async (req) => {
       _key: "cakto_webhook_token",
     });
 
-    if (expectedToken && expectedToken !== "") {
-      if (!incomingToken || incomingToken !== expectedToken) {
-        console.error("Invalid or missing x-cakto-token header");
-        await serviceClient.from("webhook_logs").insert({
-          payload: { error: "invalid_token", headers_received: !!incomingToken },
-          status: "error",
-          event_type: "auth_failure",
-        });
-        return new Response(
-          JSON.stringify({ error: "Unauthorized" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    if (!expectedToken || expectedToken === "") {
+      console.error("cakto_webhook_token not configured in system_settings");
+      await serviceClient.from("webhook_logs").insert({
+        payload: { error: "token_not_configured" },
+        status: "error",
+        event_type: "config_error",
+      });
+      return new Response(
+        JSON.stringify({ error: "Webhook token not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!incomingToken || incomingToken !== expectedToken) {
+      console.error("Invalid or missing x-cakto-token header");
+      await serviceClient.from("webhook_logs").insert({
+        payload: { error: "invalid_token", headers_received: !!incomingToken },
+        status: "error",
+        event_type: "auth_failure",
+      });
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // --- Extract IDs ---
@@ -138,7 +149,6 @@ Deno.serve(async (req) => {
       .update({
         subscription_status: "active",
         subscription_expires_at: expiresAt.toISOString(),
-        status: "active",
       })
       .eq("user_id", externalId);
 
