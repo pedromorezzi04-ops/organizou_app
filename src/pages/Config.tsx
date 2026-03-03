@@ -267,7 +267,7 @@ const Config = () => {
             </h2>
             <Button 
               variant="outline" 
-              onClick={() => navigate('/admin-secret-dashboard')} 
+              onClick={() => navigate('/admin-panel')} 
               className="w-full gap-2"
             >
               <Shield className="w-4 h-4" />
