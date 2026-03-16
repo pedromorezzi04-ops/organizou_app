@@ -1,14 +1,54 @@
-import { CreditCard, Zap, Shield, AlertTriangle, Check } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { CreditCard, Zap, Shield, AlertTriangle, Check, Ticket, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import logoImg from '@/assets/logo.png';
 
 const CAKTO_CHECKOUT_URL = 'https://pay.cakto.com.br/dfgjcuf_784254';
 
 const Payment = () => {
   const { user, signOut } = useAuth();
-  const { state } = useSubscription();
+  const { state, refresh } = useSubscription();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const [couponCode, setCouponCode] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponSuccess, setCouponSuccess] = useState(false);
+
+  const handleCouponActivation = async () => {
+    if (!couponCode.trim()) return;
+
+    setCouponLoading(true);
+    setCouponError(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('activate-coupon', {
+        body: { code: couponCode.trim().toUpperCase() },
+      });
+
+      if (error || !data?.success) {
+        const msg = data?.error?.message || 'Erro ao ativar cupom. Tente novamente.';
+        setCouponError(msg);
+        return;
+      }
+
+      setCouponSuccess(true);
+      toast({ title: 'Cupom ativado!', description: 'Sua assinatura está ativa. Redirecionando...' });
+      await refresh();
+      setTimeout(() => navigate('/'), 1500);
+    } catch {
+      setCouponError('Erro de conexão. Tente novamente.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
   const handleCheckout = () => {
     if (!user) return;
@@ -46,6 +86,55 @@ const Payment = () => {
             </div>
           </div>
         )}
+
+        {/* Seção de cupom */}
+        <div className="glass rounded-2xl p-5 border border-border/50 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <Ticket className="w-4 h-4 text-emerald-500" />
+            Tem um cupom de acesso?
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Digite seu cupom"
+              value={couponCode}
+              onChange={(e) => {
+                setCouponCode(e.target.value.toUpperCase());
+                setCouponError(null);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && handleCouponActivation()}
+              disabled={couponLoading || couponSuccess}
+              className="rounded-xl uppercase tracking-widest"
+            />
+            <Button
+              onClick={handleCouponActivation}
+              disabled={!couponCode.trim() || couponLoading || couponSuccess}
+              className="rounded-xl px-5 bg-emerald-600 hover:bg-emerald-700 shrink-0"
+            >
+              {couponLoading
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : 'Ativar'}
+            </Button>
+          </div>
+          {couponError && (
+            <div className="flex items-center gap-1.5 text-sm text-destructive">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {couponError}
+            </div>
+          )}
+          {couponSuccess && (
+            <div className="flex items-center gap-1.5 text-sm text-emerald-600">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              Cupom ativado! Redirecionando...
+            </div>
+          )}
+        </div>
+
+        {/* Separador */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-border/50" />
+          <span className="text-xs text-muted-foreground">ou</span>
+          <div className="flex-1 h-px bg-border/50" />
+        </div>
 
         <div className="glass-strong rounded-3xl p-6 shadow-lift space-y-6 border border-border/50">
           <div className="text-center space-y-2">
