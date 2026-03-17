@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
-import { Shield, Users, UserCheck, UserX, RefreshCw, Tag, Plus, Trash2, Loader2, CreditCard, Crown } from 'lucide-react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { Shield, Users, UserCheck, UserX, RefreshCw, Tag, Plus, Trash2, Loader2, CreditCard, Crown, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
@@ -188,6 +188,7 @@ const CouponsTab = () => {
 const AdminDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminCheck();
+  const navigate = useNavigate();
 
   if (authLoading || adminLoading) {
     return (
@@ -203,14 +204,19 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-3xl mx-auto space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-            <Shield className="w-6 h-6 text-primary" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+              <Shield className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Painel Administrativo</h1>
+              <p className="text-muted-foreground">Gerenciamento do sistema</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Painel Administrativo</h1>
-            <p className="text-muted-foreground">Gerenciamento do sistema</p>
-          </div>
+          <Button variant="outline" size="sm" onClick={() => navigate('/')}>
+            <ArrowLeft className="w-4 h-4 mr-2" />Dashboard
+          </Button>
         </div>
 
         <Tabs defaultValue="users">
