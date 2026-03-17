@@ -29,13 +29,29 @@ const Payment = () => {
     setCouponError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('activate-coupon', {
-        body: { code: couponCode.trim().toUpperCase() },
-      });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = '/auth';
+        return;
+      }
 
-      if (error || !data?.success) {
-        const msg = data?.error?.message || 'Erro ao ativar cupom. Tente novamente.';
-        setCouponError(msg);
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/activate-coupon`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ code: couponCode.trim().toUpperCase() }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        setCouponError(result.error?.message || 'Cupom inválido ou expirado.');
         return;
       }
 
