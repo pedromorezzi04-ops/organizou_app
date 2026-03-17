@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
 import { CreditCard, Zap, Shield, AlertTriangle, Check, Ticket, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,14 +12,61 @@ const CAKTO_CHECKOUT_URL = 'https://pay.cakto.com.br/dfgjcuf_784254';
 
 const Payment = () => {
   const { user, signOut } = useAuth();
-  const { state, refresh } = useSubscription();
-  const navigate = useNavigate();
+  const { state } = useSubscription();
   const { toast } = useToast();
+  const redirectingRef = useRef(false);
 
   const [couponCode, setCouponCode] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState(false);
+
+  // Detecta ativação de assinatura via Realtime + polling
+  // Resolve tanto o redirect pós-cupom quanto o retorno do Cakto
+  useEffect(() => {
+    if (!user) return;
+
+    const redirect = () => {
+      if (redirectingRef.current) return;
+      redirectingRef.current = true;
+      localStorage.removeItem('cakto_pending');
+      window.location.href = '/';
+    };
+
+    const isActive = (info: { subscription_status?: string; subscription_expires_at?: string }) =>
+      info?.subscription_status === 'active' &&
+      info?.subscription_expires_at != null &&
+      new Date(info.subscription_expires_at) > new Date();
+
+    // Verificação imediata — captura quem já pagou e voltou ao app
+    supabase.rpc('get_subscription_info', { _user_id: user.id }).then(({ data }) => {
+      if (data?.[0] && isActive(data[0])) redirect();
+    });
+
+    // Realtime — detecta o instante em que o banco é atualizado
+    const channel = supabase
+      .channel(`payment-activation-${user.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        if (isActive(payload.new as any)) redirect();
+      })
+      .subscribe();
+
+    // Polling a cada 3s como fallback (Realtime pode falhar)
+    const interval = setInterval(async () => {
+      const { data } = await supabase.rpc('get_subscription_info', { _user_id: user.id });
+      if (data?.[0] && isActive(data[0])) redirect();
+    }, 3000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
+  }, [user]);
 
   const handleCouponActivation = async () => {
     if (!couponCode.trim()) return;
@@ -57,7 +103,6 @@ const Payment = () => {
 
       setCouponSuccess(true);
       toast({ title: 'Cupom ativado!', description: 'Sua assinatura está ativa. Redirecionando...' });
-      setTimeout(() => { window.location.href = '/'; }, 1500);
     } catch {
       setCouponError('Erro de conexão. Tente novamente.');
     } finally {
