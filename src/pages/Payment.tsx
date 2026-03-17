@@ -41,8 +41,7 @@ const Payment = () => {
 
       setCouponSuccess(true);
       toast({ title: 'Cupom ativado!', description: 'Sua assinatura está ativa. Redirecionando...' });
-      await refresh();
-      setTimeout(() => navigate('/'), 1500);
+      setTimeout(() => { window.location.href = '/'; }, 1500);
     } catch {
       setCouponError('Erro de conexão. Tente novamente.');
     } finally {
