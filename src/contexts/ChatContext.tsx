@@ -31,7 +31,7 @@ export const useChat = () => {
   return context;
 };
 
-const WEBHOOK_URL = 'https://teste-n8n.xbing2.easypanel.host/webhook-test/6d08dcf3-e90e-40fc-8476-0a0571956c8c';
+const WEBHOOK_URL = 'https://teste-n8n.xbing2.easypanel.host/webhook/6d08dcf3-e90e-40fc-8476-0a0571956c8c';
 const AGENT_API_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-api`;
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
