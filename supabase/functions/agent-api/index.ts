@@ -16,7 +16,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // Parse body
-  let body: { action?: unknown; params?: unknown };
+  let body: { action?: unknown; params?: unknown; auth_token?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -35,8 +35,11 @@ Deno.serve(async (req: Request) => {
       ? (body.params as Record<string, unknown>)
       : {};
 
+  // auth_token from body (fallback when gateway strips Authorization header)
+  const bodyToken = typeof body.auth_token === 'string' ? body.auth_token : undefined;
+
   // 1. Authenticate
-  const authResult = await authenticate(req);
+  const authResult = await authenticate(req, bodyToken);
   if (authResult.response) return authResult.response;
 
   const { user, token } = authResult;

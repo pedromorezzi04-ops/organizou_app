@@ -7,17 +7,37 @@ export interface AuthResult {
   response?: Response;
 }
 
-export async function authenticate(req: Request): Promise<AuthResult> {
-  // HTTP/2 proxies (n8n, nginx) may lowercase headers — check both
+export async function authenticate(req: Request, bodyToken?: string): Promise<AuthResult> {
+  // Log all incoming headers for debugging
+  console.log(JSON.stringify({
+    middleware: 'auth',
+    headers: Object.fromEntries(req.headers.entries()),
+    timestamp: new Date().toISOString(),
+  }));
+
+  // Token resolution order:
+  // 1. Authorization header (standard)
+  // 2. x-auth-token header (custom fallback)
+  // 3. auth_token from body (when gateway strips Authorization)
   const authHeader =
     req.headers.get('authorization') ??
-    req.headers.get('Authorization');
+    req.headers.get('Authorization') ??
+    req.headers.get('x-auth-token');
 
-  if (!authHeader?.startsWith('Bearer ')) {
+  let token: string | undefined;
+
+  if (authHeader?.startsWith('Bearer ')) {
+    token = authHeader.slice(7);
+  } else if (authHeader) {
+    token = authHeader; // x-auth-token sem prefixo Bearer
+  } else if (bodyToken) {
+    token = bodyToken;
+  }
+
+  if (!token) {
     console.warn(JSON.stringify({
       middleware: 'auth',
       status: 'missing_token',
-      header_present: !!authHeader,
       timestamp: new Date().toISOString(),
     }));
     return {
@@ -26,8 +46,6 @@ export async function authenticate(req: Request): Promise<AuthResult> {
       response: errorResponse('AUTH_REQUIRED', 'Token de autenticação ausente'),
     };
   }
-
-  const token = authHeader.slice(7);
 
   // Clean client — no user headers injected — standard Supabase pattern for JWT validation
   const supabase = createClient(
