@@ -10,7 +10,7 @@ export async function handleProfileGet(
   const supabase = createAuthenticatedClient(token);
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, business_name, primary_color, logo_url, tax_regime, tax_rate, mei_fixed_value, created_at, updated_at')
+    .select('id, business_name, primary_color, logo_url, tax_type, tax_percentage, tax_fixed_value, created_at, updated_at')
     .single();
 
   if (error) return errorResponse('INTERNAL_ERROR', 'Erro ao buscar perfil');
@@ -43,7 +43,7 @@ export async function handleProfileUpdate(
   const { data, error } = await supabase
     .from('profiles')
     .update(updates)
-    .select('id, business_name, primary_color, logo_url, tax_regime, tax_rate, mei_fixed_value, created_at, updated_at')
+    .select('id, business_name, primary_color, logo_url, tax_type, tax_percentage, tax_fixed_value, created_at, updated_at')
     .single();
 
   if (error) return errorResponse('INTERNAL_ERROR', 'Erro ao atualizar perfil');

@@ -15,7 +15,7 @@ export async function handleTaxesConfigGet(
   const supabase = createAuthenticatedClient(token);
   const { data, error } = await supabase
     .from('profiles')
-    .select('tax_regime, tax_rate, mei_fixed_value')
+    .select('tax_type, tax_percentage, tax_fixed_value')
     .single();
 
   if (error) return errorResponse('INTERNAL_ERROR', 'Erro ao buscar configuração tributária');
@@ -27,39 +27,39 @@ export async function handleTaxesConfigUpdate(
   _userId: string,
   token: string
 ): Promise<Response> {
-  const err = validateRequired(params, ['tax_regime']);
+  const err = validateRequired(params, ['tax_type']);
   if (err) return errorResponse('VALIDATION_ERROR', err);
 
-  const regimeErr = validateEnum(params.tax_regime, ['MEI', 'ME'], 'tax_regime');
+  const regimeErr = validateEnum(params.tax_type, ['MEI', 'ME'], 'tax_type');
   if (regimeErr) return errorResponse('VALIDATION_ERROR', regimeErr);
 
-  if (params.tax_regime === 'MEI') {
-    if (params.mei_fixed_value === undefined || params.mei_fixed_value === null) {
-      return errorResponse('VALIDATION_ERROR', "O campo 'mei_fixed_value' é obrigatório para MEI");
+  if (params.tax_type === 'MEI') {
+    if (params.tax_fixed_value === undefined || params.tax_fixed_value === null) {
+      return errorResponse('VALIDATION_ERROR', "O campo 'tax_fixed_value' é obrigatório para MEI");
     }
-    if (typeof params.mei_fixed_value !== 'number' || params.mei_fixed_value <= 0) {
-      return errorResponse('VALIDATION_ERROR', "O campo 'mei_fixed_value' deve ser um número maior que zero");
+    if (typeof params.tax_fixed_value !== 'number' || params.tax_fixed_value <= 0) {
+      return errorResponse('VALIDATION_ERROR', "O campo 'tax_fixed_value' deve ser um número maior que zero");
     }
   }
 
-  if (params.tax_regime === 'ME') {
-    if (params.tax_rate === undefined || params.tax_rate === null) {
-      return errorResponse('VALIDATION_ERROR', "O campo 'tax_rate' é obrigatório para ME");
+  if (params.tax_type === 'ME') {
+    if (params.tax_percentage === undefined || params.tax_percentage === null) {
+      return errorResponse('VALIDATION_ERROR', "O campo 'tax_percentage' é obrigatório para ME");
     }
-    if (typeof params.tax_rate !== 'number' || params.tax_rate < 0.01 || params.tax_rate > 100) {
-      return errorResponse('VALIDATION_ERROR', "O campo 'tax_rate' deve ser um percentual entre 0.01 e 100");
+    if (typeof params.tax_percentage !== 'number' || params.tax_percentage < 0.01 || params.tax_percentage > 100) {
+      return errorResponse('VALIDATION_ERROR', "O campo 'tax_percentage' deve ser um percentual entre 0.01 e 100");
     }
   }
 
   const supabase = createAuthenticatedClient(token);
-  const updates: Record<string, unknown> = { tax_regime: params.tax_regime };
-  if (params.tax_rate !== undefined) updates.tax_rate = params.tax_rate;
-  if (params.mei_fixed_value !== undefined) updates.mei_fixed_value = params.mei_fixed_value;
+  const updates: Record<string, unknown> = { tax_type: params.tax_type };
+  if (params.tax_percentage !== undefined) updates.tax_percentage = params.tax_percentage;
+  if (params.tax_fixed_value !== undefined) updates.tax_fixed_value = params.tax_fixed_value;
 
   const { data, error } = await supabase
     .from('profiles')
     .update(updates)
-    .select('tax_regime, tax_rate, mei_fixed_value')
+    .select('tax_type, tax_percentage, tax_fixed_value')
     .single();
 
   if (error) return errorResponse('INTERNAL_ERROR', 'Erro ao atualizar configuração tributária');
@@ -87,7 +87,7 @@ export async function handleTaxesCalculate(
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('tax_regime, tax_rate, mei_fixed_value')
+    .select('tax_type, tax_percentage, tax_fixed_value')
     .single();
 
   if (profileError || !profile) {
@@ -101,9 +101,9 @@ export async function handleTaxesCalculate(
   let calculatedAmount = 0;
   let revenue: number | null = null;
 
-  if (profile.tax_regime === 'MEI') {
-    calculatedAmount = profile.mei_fixed_value ?? 0;
-  } else if (profile.tax_regime === 'ME') {
+  if (profile.tax_type === 'MEI') {
+    calculatedAmount = profile.tax_fixed_value ?? 0;
+  } else if (profile.tax_type === 'ME') {
     const { data: incomeData, error: incomeError } = await supabase
       .from('transactions')
       .select('amount')
@@ -115,7 +115,7 @@ export async function handleTaxesCalculate(
     if (incomeError) return errorResponse('INTERNAL_ERROR', 'Erro ao calcular faturamento');
 
     revenue = (incomeData ?? []).reduce((sum, t) => sum + Number(t.amount), 0);
-    calculatedAmount = Math.round(revenue * ((profile.tax_rate ?? 0) / 100) * 100) / 100;
+    calculatedAmount = Math.round(revenue * ((profile.tax_percentage ?? 0) / 100) * 100) / 100;
   }
 
   const { data: existingPayment } = await supabase
@@ -146,7 +146,7 @@ export async function handleTaxesCalculate(
   return successResponse({
     month,
     year,
-    regime: profile.tax_regime,
+    regime: profile.tax_type,
     ...(revenue !== null ? { revenue } : {}),
     calculated_amount: calculatedAmount,
     payment_status: payment.status,
