@@ -35,13 +35,13 @@ export async function handleTransactionsList(
   if (params.date_from !== undefined) {
     const err = validateISODate(params.date_from, 'date_from');
     if (err) return errorResponse('VALIDATION_ERROR', err);
-    query = query.gte('date', params.date_from as string);
+    query = query.gte('due_date', params.date_from as string);
   }
 
   if (params.date_to !== undefined) {
     const err = validateISODate(params.date_to, 'date_to');
     if (err) return errorResponse('VALIDATION_ERROR', err);
-    query = query.lte('date', params.date_to as string);
+    query = query.lte('due_date', params.date_to as string);
   }
 
   if (params.search !== undefined) {
@@ -126,6 +126,15 @@ export async function handleTransactionsCreate(
     if (statusErr) return errorResponse('VALIDATION_ERROR', statusErr);
   }
 
+  if (params.payment_method !== undefined) {
+    const pmErr = validateEnum(
+      params.payment_method,
+      ['dinheiro', 'pix', 'cartao', 'promissoria', 'debito', 'transferencia'],
+      'payment_method',
+    );
+    if (pmErr) return errorResponse('VALIDATION_ERROR', pmErr);
+  }
+
   const supabase = createAuthenticatedClient(token);
   const { data, error } = await supabase
     .from('transactions')
@@ -137,7 +146,7 @@ export async function handleTransactionsCreate(
       status: params.status ?? 'pending',
       payment_method: params.payment_method ?? null,
       category: params.category ?? null,
-      date: params.date ?? new Date().toISOString().split('T')[0],
+      due_date: params.date ?? new Date().toISOString().split('T')[0],
     })
     .select()
     .single();
@@ -175,6 +184,15 @@ export async function handleTransactionsUpdate(
     if (dateErr) return errorResponse('VALIDATION_ERROR', dateErr);
   }
 
+  if (params.payment_method !== undefined) {
+    const pmErr = validateEnum(
+      params.payment_method,
+      ['dinheiro', 'pix', 'cartao', 'promissoria', 'debito', 'transferencia'],
+      'payment_method',
+    );
+    if (pmErr) return errorResponse('VALIDATION_ERROR', pmErr);
+  }
+
   const supabase = createAuthenticatedClient(token);
 
   const { data: existing } = await supabase
@@ -191,7 +209,7 @@ export async function handleTransactionsUpdate(
   if (params.status !== undefined) updates.status = params.status;
   if (params.payment_method !== undefined) updates.payment_method = params.payment_method;
   if (params.category !== undefined) updates.category = params.category;
-  if (params.date !== undefined) updates.date = params.date;
+  if (params.date !== undefined) updates.due_date = params.date;
 
   const { data, error } = await supabase
     .from('transactions')

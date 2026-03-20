@@ -164,66 +164,29 @@ const Dashboard = () => {
       {isCheckingPayment && <PaymentChecker />}
       <div className="space-y-5">
         <ExpirationBanner />
-        {/* Hero + Chart side-by-side on desktop */}
-        <div className="space-y-5">
-          {/* Hero card: Sobrou no mês */}
-          <div className={cn(
-            "rounded-2xl p-6 lg:p-8 text-primary-foreground relative overflow-hidden",
-            "bg-gradient-to-br from-primary via-primary/90 to-emerald",
-            "shadow-lift animate-fade-in"
-          )}>
-            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-primary-foreground/5" />
-            <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full bg-primary-foreground/5" />
+        {/* Hero card: Sobrou no mês */}
+        <div className={cn(
+          "rounded-2xl p-6 lg:p-8 text-primary-foreground relative overflow-hidden",
+          "bg-gradient-to-br from-primary via-primary/90 to-emerald",
+          "shadow-lift animate-fade-in"
+        )}>
+          <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-primary-foreground/5" />
+          <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full bg-primary-foreground/5" />
 
-            <p className="text-sm font-medium opacity-90 relative z-10">Sobrou no mês</p>
-            {isLoading ? (
-              <Skeleton className="h-10 w-40 bg-primary-foreground/20 mt-1" />
-            ) : (
-              <p className={cn(
-                "text-3xl lg:text-4xl font-bold mt-1 tabular-nums relative z-10",
-                summary.sobrou < 0 && "text-red-200"
-              )}>
-                {formatCurrency(summary.sobrou)}
-              </p>
-            )}
-            <p className="text-xs opacity-75 mt-2 relative z-10">
-              {summary.sobrou >= 0 ? "Continue assim! 🎉" : "Atenção aos gastos 📊"}
+          <p className="text-sm font-medium opacity-90 relative z-10">Sobrou no mês</p>
+          {isLoading ? (
+            <Skeleton className="h-10 w-40 bg-primary-foreground/20 mt-1" />
+          ) : (
+            <p className={cn(
+              "text-3xl lg:text-4xl font-bold mt-1 tabular-nums relative z-10",
+              summary.sobrou < 0 && "text-red-200"
+            )}>
+              {formatCurrency(summary.sobrou)}
             </p>
-          </div>
-
-          {/* Weekly chart - inline on desktop */}
-          {!isLoading && weeklyData.some(w => w.income > 0 || w.expense > 0) && (
-            <div className="bg-card shadow-card border border-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
-              <p className="text-xs font-semibold text-muted-foreground mb-4 uppercase tracking-wider">
-                Fluxo semanal do mês
-              </p>
-              <div className="h-[100px] lg:h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={weeklyData} barGap={3} barCategoryGap="20%">
-                    <XAxis
-                      dataKey="week"
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                    />
-                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--accent))', radius: 4 }} />
-                    <Bar dataKey="income" fill="hsl(var(--emerald))" radius={[4, 4, 0, 0]} opacity={0.85} />
-                    <Bar dataKey="expense" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} opacity={0.65} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex justify-center gap-5 mt-3">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-sm bg-emerald opacity-85" />
-                  <span className="text-xs text-muted-foreground font-medium">Entradas</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-sm bg-destructive opacity-65" />
-                  <span className="text-xs text-muted-foreground font-medium">Saídas</span>
-                </div>
-              </div>
-            </div>
           )}
+          <p className="text-xs opacity-75 mt-2 relative z-10">
+            {summary.sobrou >= 0 ? "Continue assim! 🎉" : "Atenção aos gastos 📊"}
+          </p>
         </div>
 
         {/* Summary cards */}
@@ -239,6 +202,40 @@ const Dashboard = () => {
             </>
           )}
         </div>
+
+        {/* Weekly chart */}
+        {!isLoading && weeklyData.some(w => w.income > 0 || w.expense > 0) && (
+          <div className="bg-card shadow-card border border-border rounded-xl p-4 animate-slide-up" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
+            <p className="text-xs font-semibold text-muted-foreground mb-4 uppercase tracking-wider">
+              Fluxo semanal do mês
+            </p>
+            <div className="h-[100px] lg:h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={weeklyData} barGap={3} barCategoryGap="20%">
+                  <XAxis
+                    dataKey="week"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                  />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--accent))', radius: 4 }} />
+                  <Bar dataKey="income" fill="hsl(var(--emerald))" radius={[4, 4, 0, 0]} opacity={0.85} />
+                  <Bar dataKey="expense" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} opacity={0.65} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex justify-center gap-5 mt-3">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-sm bg-emerald opacity-85" />
+                <span className="text-xs text-muted-foreground font-medium">Entradas</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-sm bg-destructive opacity-65" />
+                <span className="text-xs text-muted-foreground font-medium">Saídas</span>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </Layout>

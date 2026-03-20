@@ -34,6 +34,9 @@ export async function authenticate(req: Request, bodyToken?: string): Promise<Au
     token = bodyToken;
   }
 
+  // Remove accidental whitespace that invalidates the JWT
+  token = token?.trim();
+
   if (!token) {
     console.warn(JSON.stringify({
       middleware: 'auth',
@@ -46,6 +49,17 @@ export async function authenticate(req: Request, bodyToken?: string): Promise<Au
       response: errorResponse('AUTH_REQUIRED', 'Token de autenticação ausente'),
     };
   }
+
+  // DEBUG: log token fingerprint to identify what n8n is sending
+  console.log(JSON.stringify({
+    middleware: 'auth',
+    status: 'token_received',
+    token_length: token.length,
+    token_prefix: token.substring(0, 20),
+    token_suffix: token.substring(token.length - 10),
+    is_jwt: token.split('.').length === 3,
+    timestamp: new Date().toISOString(),
+  }));
 
   // Clean client — no user headers injected — standard Supabase pattern for JWT validation
   const supabase = createClient(
@@ -60,6 +74,9 @@ export async function authenticate(req: Request, bodyToken?: string): Promise<Au
       middleware: 'auth',
       status: 'invalid_token',
       error: error?.message ?? 'no user returned',
+      token_length: token.length,
+      token_prefix: token.substring(0, 30),
+      token_is_jwt: token.split('.').length === 3,
       timestamp: new Date().toISOString(),
     }));
     return {

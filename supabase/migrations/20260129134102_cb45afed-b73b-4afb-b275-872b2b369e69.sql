@@ -50,9 +50,7 @@ ALTER TABLE public.profiles
 ADD COLUMN status TEXT NOT NULL DEFAULT 'active' 
 CHECK (status IN ('active', 'blocked'));
 
--- 7. Insert admin role for the specified user
-INSERT INTO public.user_roles (user_id, role) 
-VALUES ('f55d1e1f-d14a-4bb4-be8a-a9718785ef9e', 'admin');
+-- 7. Admin role inserted manually after first login
 
 -- 8. Create function to check if user is blocked (security definer)
 CREATE OR REPLACE FUNCTION public.is_user_blocked(_user_id UUID)
