@@ -1,18 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
-import { Sparkles, X, Send, Loader2 } from 'lucide-react';
+import { Sparkles, X, Send, Loader2, MessageCircle, Mic } from 'lucide-react';
 import { useChat, ChatMessage } from '@/contexts/ChatContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 const ChatWidget = () => {
-  const { messages, isOpen, isLoading, toggleChat, closeChat, sendMessage } = useChat();
+  const { messages, isOpen, isLoading, openChat, closeChat, sendMessage } = useChat();
+  const [isHubOpen, setIsHubOpen] = useState(false);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Auto-scroll to bottom when new messages arrive
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
@@ -24,10 +24,14 @@ const ChatWidget = () => {
     }
   }, [isOpen]);
 
+  // Close hub when chat window opens
+  useEffect(() => {
+    if (isOpen) setIsHubOpen(false);
+  }, [isOpen]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-    
     const message = input;
     setInput('');
     await sendMessage(message);
@@ -37,7 +41,7 @@ const ChatWidget = () => {
     <>
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-20 right-4 z-50 w-80 sm:w-96 animate-in slide-in-from-bottom-4 fade-in duration-200">
+        <div className="fixed bottom-20 right-4 z-[60] w-80 sm:w-96 animate-in slide-in-from-bottom-4 fade-in duration-200">
           <div className="bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
             {/* Header */}
             <div className="bg-primary px-4 py-3 flex items-center justify-between">
@@ -60,8 +64,8 @@ const ChatWidget = () => {
               </button>
             </div>
 
-            {/* Messages Area - Native scrollable div */}
-            <div 
+            {/* Messages Area */}
+            <div
               ref={scrollContainerRef}
               className="flex-1 p-4 min-h-[200px] max-h-[350px] overflow-y-auto"
             >
@@ -90,7 +94,6 @@ const ChatWidget = () => {
                       <span className="text-xs">Digitando...</span>
                     </div>
                   )}
-                  {/* Invisible element to scroll to */}
                   <div ref={messagesEndRef} />
                 </div>
               )}
@@ -126,21 +129,74 @@ const ChatWidget = () => {
         </div>
       )}
 
-      {/* Floating Action Button */}
-      <button
-        onClick={toggleChat}
-        className={cn(
-          "fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full shadow-lg",
-          "bg-primary text-primary-foreground",
-          "flex items-center justify-center",
-          "transition-all duration-200 hover:scale-105 active:scale-95",
-          "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2",
-          isOpen && "rotate-180 opacity-0 pointer-events-none"
+      {/* Backdrop — covers BottomNav (z-50) when hub is open */}
+      {isHubOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 z-[55] animate-in fade-in duration-200"
+          onClick={() => setIsHubOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Floating Hub */}
+      <div className="fixed bottom-20 right-4 z-[60] flex flex-col items-end gap-3">
+
+        {/* Pills — visible when hub is open */}
+        {isHubOpen && (
+          <>
+            {/* Áudio pill */}
+            <button
+              onClick={() => {
+                setIsHubOpen(false);
+                console.log('Audio clicked');
+              }}
+              className="flex items-center gap-2.5 px-4 py-3 rounded-full shadow-lg bg-indigo-500 hover:bg-indigo-600 active:scale-95 text-white text-sm font-medium transition-colors min-h-[44px] animate-in slide-in-from-bottom-2 fade-in duration-200"
+              style={{ animationDelay: '80ms', animationFillMode: 'backwards' }}
+              aria-label="Abrir assistente de áudio"
+            >
+              <span className="relative inline-flex items-center justify-center w-5 h-5">
+                <Mic className="w-5 h-5 relative z-10" />
+                <span className="sonar-ring" style={{ animationDelay: '0s' }} />
+                <span className="sonar-ring" style={{ animationDelay: '0.5s' }} />
+                <span className="sonar-ring" style={{ animationDelay: '1s' }} />
+              </span>
+              <span>Áudio</span>
+            </button>
+
+            {/* Chat pill */}
+            <button
+              onClick={() => {
+                setIsHubOpen(false);
+                openChat();
+              }}
+              className="flex items-center gap-2.5 px-4 py-3 rounded-full shadow-lg bg-primary hover:bg-primary/90 active:scale-95 text-primary-foreground text-sm font-medium transition-colors min-h-[44px] animate-in slide-in-from-bottom-2 fade-in duration-200"
+              style={{ animationDelay: '0ms', animationFillMode: 'backwards' }}
+              aria-label="Abrir assistente de chat"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span>Chat</span>
+            </button>
+          </>
         )}
-        aria-label="Abrir assistente financeiro"
-      >
-        <Sparkles className="w-6 h-6" />
-      </button>
+
+        {/* Main FAB */}
+        <button
+          onClick={() => setIsHubOpen((prev) => !prev)}
+          className={cn(
+            'w-14 h-14 rounded-full shadow-lg',
+            'bg-primary text-primary-foreground',
+            'flex items-center justify-center',
+            'transition-all duration-200 hover:scale-105 active:scale-95',
+            'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2',
+          )}
+          aria-label={isHubOpen ? 'Fechar menu assistente' : 'Abrir menu assistente'}
+          aria-expanded={isHubOpen}
+        >
+          <div className={cn('transition-transform duration-200', isHubOpen && 'rotate-45')}>
+            {isHubOpen ? <X className="w-6 h-6" /> : <Sparkles className="w-6 h-6" />}
+          </div>
+        </button>
+      </div>
     </>
   );
 };
@@ -149,13 +205,13 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
   const isUser = message.role === 'user';
 
   return (
-    <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
+    <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
-          "max-w-[85%] px-3 py-2 rounded-2xl text-sm",
+          'max-w-[85%] px-3 py-2 rounded-2xl text-sm',
           isUser
-            ? "bg-primary text-primary-foreground rounded-br-md"
-            : "bg-muted text-foreground rounded-bl-md"
+            ? 'bg-primary text-primary-foreground rounded-br-md'
+            : 'bg-muted text-foreground rounded-bl-md',
         )}
       >
         <p className="whitespace-pre-wrap break-words">{message.content}</p>
