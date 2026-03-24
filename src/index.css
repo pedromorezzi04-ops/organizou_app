@@ -163,3 +163,13 @@
   animation: audio-wave 0.8s ease-in-out infinite;
   align-self: center;
 }
+
+/* Audio response entrance animation */
+@keyframes response-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+.response-enter {
+  animation: response-enter 300ms ease-out;
+}
