@@ -3,10 +3,12 @@ import { Sparkles, X, Send, Loader2, MessageCircle, Mic } from 'lucide-react';
 import { useChat, ChatMessage } from '@/contexts/ChatContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import AudioRecorder from '@/components/AudioRecorder';
 
 const ChatWidget = () => {
   const { messages, isOpen, isLoading, openChat, closeChat, sendMessage } = useChat();
   const [isHubOpen, setIsHubOpen] = useState(false);
+  const [isAudioOpen, setIsAudioOpen] = useState(false);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -129,6 +131,9 @@ const ChatWidget = () => {
         </div>
       )}
 
+      {/* Audio Recorder bottom sheet */}
+      {isAudioOpen && <AudioRecorder onClose={() => setIsAudioOpen(false)} />}
+
       {/* Backdrop — covers BottomNav (z-50) when hub is open */}
       {isHubOpen && (
         <div
@@ -148,7 +153,7 @@ const ChatWidget = () => {
             <button
               onClick={() => {
                 setIsHubOpen(false);
-                console.log('Audio clicked');
+                setIsAudioOpen(true);
               }}
               className="flex items-center gap-2.5 px-4 py-3 rounded-full shadow-lg bg-indigo-500 hover:bg-indigo-600 active:scale-95 text-white text-sm font-medium transition-colors min-h-[44px] animate-in slide-in-from-bottom-2 fade-in duration-200"
               style={{ animationDelay: '80ms', animationFillMode: 'backwards' }}
